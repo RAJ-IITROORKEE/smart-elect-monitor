@@ -2,6 +2,10 @@
  * POST /api/predict
  * Runs the water quality prediction model.
  *
+ * Attempts to call the Railway-hosted FastAPI model (FASTAPI_URL env var).
+ * Falls back to the built-in TypeScript engine if the env var is not set
+ * or if the upstream call fails (keeps the app functional during dev / cold starts).
+ *
  * Body: { ph: number, tds: number, conductivity: number, turbidity: number }
  * Returns: WaterPrediction
  */
@@ -29,7 +33,34 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const prediction = predictWaterQuality({ ph, tds, conductivity, turbidity });
+  // ── Azure FastAPI path ─────────────────────────────────────────────────────
+  const fastapiUrl = process.env.FASTAPI_URL;
+  if (fastapiUrl) {
+    try {
+      const params = new URLSearchParams({
+        ph: String(ph),
+        tds: String(tds),
+        conductivity: String(conductivity),
+        turbidity: String(turbidity),
+      });
+      const upstream = await fetch(`${fastapiUrl}/predict?${params}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        cache: "no-store",
+        signal: AbortSignal.timeout(8000), // 8 s hard timeout
+      });
 
-  return NextResponse.json(prediction);
+      if (upstream.ok) {
+        const data = await upstream.json();
+        return NextResponse.json({ ...data, engine: "railway" });
+      }
+      console.warn(`[predict] Azure FastAPI returned ${upstream.status} — falling back to TypeScript engine`);
+    } catch (err) {
+      console.warn("[predict] Azure FastAPI unreachable — falling back to TypeScript engine", err);
+    }
+  }
+
+  // ── TypeScript fallback engine ─────────────────────────────────────────────
+  const prediction = predictWaterQuality({ ph, tds, conductivity, turbidity });
+  return NextResponse.json({ ...prediction, engine: "typescript" });
 }
