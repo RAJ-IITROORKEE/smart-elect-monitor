@@ -43,10 +43,10 @@ export async function GET(req: NextRequest) {
   // ── 1. Try MongoDB ───────────────────────────────────────────────────────
   try {
     await connectDB();
-    const docs = await Reading.find()
-      .sort({ receivedAt: -1 })
-      .limit(limit)
-      .lean();
+    const [docs, totalReadings] = await Promise.all([
+      Reading.find().sort({ receivedAt: -1 }).limit(limit).lean(),
+      Reading.countDocuments(),
+    ]);
 
     if (docs.length > 0) {
       const data = docs.map((doc) => ({
@@ -65,10 +65,15 @@ export async function GET(req: NextRequest) {
         spreadingFactor: doc.spreadingFactor ?? null,
       }));
 
+      // docs[0] is newest (sorted desc)
+      const lastDataAt = (docs[0].receivedAt as Date).toISOString();
+
       return NextResponse.json({
         status: "ok",
         source: "mongodb",
         count: data.length,
+        totalReadings,
+        lastDataAt,
         data,
       });
     }
@@ -82,11 +87,16 @@ export async function GET(req: NextRequest) {
     if (res.ok) {
       const json = await res.json();
       if (Array.isArray(json.data) && json.data.length > 0) {
+        const relayData = json.data as SensorReading[];
+        const lastDataAt: string | undefined =
+          relayData[0]?.receivedAt ?? relayData[0]?.timestamp ?? undefined;
         return NextResponse.json({
           status: "ok",
           source: "relay",
-          count: json.data.length,
-          data: json.data,
+          count: relayData.length,
+          totalReadings: relayData.length,
+          lastDataAt,
+          data: relayData,
         });
       }
     }

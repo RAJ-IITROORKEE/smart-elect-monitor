@@ -6,11 +6,11 @@ import { DeviceCard } from "@/components/device-card";
 import { HeroSection } from "@/components/hero-section";
 import { StatsBar } from "@/components/stats-bar";
 import { ModelSimulator } from "@/components/model-simulator";
-import { mergeIntoHistory, getDeviceHistory } from "@/lib/local-history";
+import { mergeIntoHistory } from "@/lib/local-history";
 import { Wifi, WifiOff, RefreshCw, Clock, FlaskConical, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const POLL_INTERVAL_MS = 60_000;
+const POLL_INTERVAL_MS = 30_000; // 30s — keeps stats fresh
 const STALE_THRESHOLD_MS = 2 * 60 * 1000; // 2 minutes
 
 /** Feed the latest reading for each device through the prediction API */
@@ -60,6 +60,7 @@ export default function DashboardPage() {
   );
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [totalDbReadings, setTotalDbReadings] = useState<number>(0);
   const [online, setOnline] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [simOpen, setSimOpen] = useState(false);
@@ -79,6 +80,18 @@ export default function DashboardPage() {
       if (!res.ok) throw new Error("fetch failed");
       const json = await res.json();
       const readings: SensorReading[] = json.data ?? [];
+
+      // ── Total readings count from DB (or relay count as fallback) ────────
+      if (typeof json.totalReadings === "number") {
+        setTotalDbReadings(json.totalReadings);
+      }
+
+      // ── Last data point timestamp (from newest reading, not fetch time) ──
+      const dataTimestamp = json.lastDataAt
+        ? new Date(json.lastDataAt)
+        : readings[0]?.receivedAt
+        ? new Date(readings[0].receivedAt)
+        : new Date();
 
       // ── Persist into localStorage and get full history ──────────────────
       const allHistory = mergeIntoHistory(readings);
@@ -106,7 +119,7 @@ export default function DashboardPage() {
       if (!mountedRef.current) return;
       setDevices(enriched);
       setDeviceHistories(historyMap);
-      setLastUpdated(new Date());
+      setLastUpdated(dataTimestamp);
       setOnline(true);
     } catch {
       if (!mountedRef.current) return;
@@ -130,10 +143,6 @@ export default function DashboardPage() {
 
   const safeCount = devices.filter((d) => d.prediction?.water_status === "Safe").length;
   const unsafeCount = devices.filter((d) => d.prediction?.water_status === "Unsafe").length;
-  const totalReadings = Array.from(deviceHistories.values()).reduce(
-    (sum, h) => sum + h.length,
-    0
-  );
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
@@ -159,7 +168,7 @@ export default function DashboardPage() {
           {online ? (
             <span className="flex items-center gap-1.5 text-xs font-medium text-emerald-500">
               <Wifi className="h-3.5 w-3.5" />
-              Live · Auto-refreshes every 60s
+              Live · Auto-refreshes every 30s
             </span>
           ) : (
             <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
@@ -172,7 +181,7 @@ export default function DashboardPage() {
         <div className="flex items-center gap-3">
           {lastUpdated && (
             <span className="text-xs text-muted-foreground">
-              Last updated {lastUpdated.toLocaleTimeString()}
+              Last data {lastUpdated.toLocaleTimeString()}
             </span>
           )}
           <button
@@ -207,7 +216,7 @@ export default function DashboardPage() {
         total={devices.length}
         safe={safeCount}
         unsafe={unsafeCount}
-        readings={totalReadings}
+        readings={totalDbReadings}
         className="mt-4"
       />
 
