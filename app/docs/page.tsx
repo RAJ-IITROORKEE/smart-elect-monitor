@@ -112,7 +112,7 @@ export default function DocsPage() {
             </CardHeader>
             <CardContent className="space-y-2 text-sm text-muted-foreground">
               <pre className="overflow-x-auto rounded-lg bg-muted p-3 text-xs font-mono text-foreground">
-                POST https://&lt;your-domain&gt;/api/webhook
+                POST https://jalrakshak-ai-dualcore.vercel.app/api/webhook
               </pre>
               <p className="text-xs">
                 Optionally set <code className="text-primary">TTN_WEBHOOK_SECRET</code> env var
@@ -138,7 +138,7 @@ export default function DocsPage() {
               method: "GET",
               path: "/api/sensor-data",
               params: "?limit=20",
-              desc: "Returns latest sensor readings. Falls back to SmartPark relay if local store is empty.",
+              desc: "Returns latest sensor readings. Reads from MongoDB; falls back to SmartPark relay if DB is empty.",
             },
             {
               method: "POST",
@@ -150,7 +150,7 @@ export default function DocsPage() {
               method: "POST",
               path: "/api/webhook",
               params: "",
-              desc: "TTN uplink receiver. Decodes & stores sensor reading in memory.",
+              desc: "TTN uplink receiver. Decodes & stores sensor reading in MongoDB (Device + Reading collections).",
             },
           ].map(({ method, path, params, desc }) => (
             <div key={path} className="rounded-xl border border-border/60 bg-card p-4">

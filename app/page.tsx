@@ -7,7 +7,7 @@ import { HeroSection } from "@/components/hero-section";
 import { StatsBar } from "@/components/stats-bar";
 import { ModelSimulator } from "@/components/model-simulator";
 import { mergeIntoHistory, getDeviceHistory } from "@/lib/local-history";
-import { Wifi, WifiOff, RefreshCw, Clock } from "lucide-react";
+import { Wifi, WifiOff, RefreshCw, Clock, FlaskConical, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const POLL_INTERVAL_MS = 60_000;
@@ -62,6 +62,7 @@ export default function DashboardPage() {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [online, setOnline] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [simOpen, setSimOpen] = useState(false);
   const [now, setNow] = useState(() => Date.now());
   const mountedRef = useRef(true);
 
@@ -182,9 +183,24 @@ export default function DashboardPage() {
             <RefreshCw className={cn("h-3.5 w-3.5", refreshing && "animate-spin")} />
             Refresh
           </button>
-          <ModelSimulator />
+          <button
+            onClick={() => setSimOpen((v) => !v)}
+            className={cn(
+              "flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors",
+              simOpen
+                ? "border-primary/50 bg-primary/10 text-primary"
+                : "border-border bg-background text-muted-foreground hover:bg-accent hover:text-foreground"
+            )}
+          >
+            <FlaskConical className="h-3.5 w-3.5" />
+            Model Simulator
+            {simOpen && <X className="h-3 w-3 ml-0.5 opacity-60" />}
+          </button>
         </div>
       </div>
+
+      {/* Model Simulator panel — full width below status bar */}
+      <ModelSimulator open={simOpen} onClose={() => setSimOpen(false)} />
 
       {/* Stats */}
       <StatsBar

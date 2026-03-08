@@ -1,4 +1,4 @@
-import { Droplets, Cpu, Satellite, ShieldCheck, Users, Zap, Globe, Award } from "lucide-react";
+import { Droplets, Cpu, Satellite, ShieldCheck, Users, Zap, Globe, Award, Mail, Github } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -37,7 +37,34 @@ const features = [
 ];
 
 const team = [
-  { name: "DualCode Team", role: "Full-Stack + ML Engineering" },
+  {
+    initials: "RR",
+    name: "Raj Rabidas",
+    email: "raj_r@mt.iitr.ac.in",
+    year: "3rd Year B.Tech",
+    branch: "Metallurgical & Materials Engineering",
+    institute: "IIT Roorkee",
+    role: "Leader",
+    github: "https://github.com/RAJ-IITROORKEE",
+    avatarBg: "bg-primary/15",
+    avatarRing: "ring-primary/30",
+    avatarText: "text-primary",
+    badgeBg: "bg-amber-500/10 text-amber-500 border-amber-500/30",
+  },
+  {
+    initials: "MR",
+    name: "Mansi Rajput",
+    email: "mansi1@me.iitr.ac.in",
+    year: "2nd Year B.Tech",
+    branch: "Mechanical & Industrial Engineering",
+    institute: "IIT Roorkee",
+    role: "Member",
+    github: null,
+    avatarBg: "bg-purple-500/15",
+    avatarRing: "ring-purple-500/30",
+    avatarText: "text-purple-400",
+    badgeBg: "bg-purple-500/10 text-purple-400 border-purple-500/30",
+  },
 ];
 
 const techStack = [
@@ -154,21 +181,67 @@ export default function AboutPage() {
 
       {/* Team */}
       <section>
-        <h2 className="mb-4 text-2xl font-bold text-foreground">Team</h2>
-        {team.map(({ name, role }) => (
-          <div key={name} className="flex items-center gap-4 rounded-xl border border-border/60 bg-card p-5">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-              <Users className="h-6 w-6 text-primary" />
-            </div>
-            <div>
-              <p className="font-semibold text-foreground">{name}</p>
-              <p className="text-sm text-muted-foreground">{role}</p>
-            </div>
-            <Badge className="ml-auto bg-amber-500/10 text-amber-500 border-amber-500/30">
-              Hackathon 2026
-            </Badge>
-          </div>
-        ))}
+        <h2 className="mb-2 text-2xl font-bold text-foreground">Team</h2>
+        <div className="mb-5 flex items-center gap-2">
+          <Badge className="bg-primary/10 text-primary border-primary/30">
+            <Users className="mr-1.5 h-3 w-3" />
+            Dual Core
+          </Badge>
+          <span className="text-xs text-muted-foreground">Microsoft AI Unlock Hackathon 2026</span>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          {team.map((member) => (
+            <Card key={member.name} className="border-border/60 overflow-hidden">
+              <CardContent className="p-0">
+                {/* Coloured top accent strip */}
+                <div className={`h-1 w-full ${member.avatarBg.replace("/15", "")}`} />
+                <div className="p-5 space-y-4">
+                  <div className="flex items-start gap-4">
+                    {/* Avatar */}
+                    <div
+                      className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-full ring-2 text-base font-bold select-none ${member.avatarBg} ${member.avatarRing} ${member.avatarText}`}
+                    >
+                      {member.initials}
+                    </div>
+                    <div className="min-w-0 flex-1 pt-0.5">
+                      <div className="flex flex-wrap items-center gap-1.5 mb-1">
+                        <span className="font-bold text-foreground">{member.name}</span>
+                        <Badge className={`text-[10px] border ${member.badgeBg}`}>
+                          {member.role}
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground">{member.year}</p>
+                      <p className="text-xs text-muted-foreground">{member.branch}</p>
+                      <p className="text-xs font-medium text-foreground/70">{member.institute}</p>
+                    </div>
+                  </div>
+
+                  {/* Contact row */}
+                  <div className="flex flex-wrap gap-2 pt-1 border-t border-border/40">
+                    <a
+                      href={`mailto:${member.email}`}
+                      className="flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                    >
+                      <Mail className="h-3 w-3" />
+                      {member.email}
+                    </a>
+                    {member.github && (
+                      <a
+                        href={member.github}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                      >
+                        <Github className="h-3 w-3" />
+                        GitHub
+                      </a>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </section>
     </div>
   );

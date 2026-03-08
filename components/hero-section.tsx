@@ -18,7 +18,7 @@ export function HeroSection() {
           {/* Hackathon badge */}
           <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
             <Cpu className="h-3 w-3" />
-            Microsoft AI Unlock Hackathon · AI for India Track
+            Microsoft AI Unlocked Hackathon · AI for India Track
           </div>
 
           <h1 className="text-3xl font-extrabold leading-tight tracking-tight text-foreground sm:text-4xl">
