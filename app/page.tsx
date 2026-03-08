@@ -5,6 +5,7 @@ import { DeviceReading, WaterPrediction, SensorReading } from "@/types";
 import { DeviceCard } from "@/components/device-card";
 import { HeroSection } from "@/components/hero-section";
 import { StatsBar } from "@/components/stats-bar";
+import { ModelSimulator } from "@/components/model-simulator";
 import { mergeIntoHistory, getDeviceHistory } from "@/lib/local-history";
 import { Wifi, WifiOff, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -173,6 +174,7 @@ export default function DashboardPage() {
             <RefreshCw className={cn("h-3.5 w-3.5", refreshing && "animate-spin")} />
             Refresh
           </button>
+          <ModelSimulator />
         </div>
       </div>
 
