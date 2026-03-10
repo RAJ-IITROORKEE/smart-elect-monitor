@@ -38,7 +38,7 @@ function toSensorReading(doc: InstanceType<typeof Reading>): SensorReading {
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const limit = Math.min(parseInt(searchParams.get("limit") || "100", 10), 500);
+  const limit = Math.min(Number.parseInt(searchParams.get("limit") || "100", 10), 500);
 
   // ── 1. Try MongoDB ───────────────────────────────────────────────────────
   try {
@@ -51,8 +51,8 @@ export async function GET(req: NextRequest) {
     if (docs.length > 0) {
       const data = docs.map((doc) => ({
         id:              doc.readingId,
-        timestamp:       (doc.timestamp as Date).toISOString(),
-        receivedAt:      (doc.receivedAt as Date).toISOString(),
+        timestamp:       doc.timestamp.toISOString(),
+        receivedAt:      doc.receivedAt.toISOString(),
         deviceId:        doc.deviceId,
         deviceName:      doc.deviceName,
         temperature:     doc.temperature ?? null,
@@ -66,7 +66,7 @@ export async function GET(req: NextRequest) {
       }));
 
       // docs[0] is newest (sorted desc)
-      const lastDataAt = (docs[0].receivedAt as Date).toISOString();
+      const lastDataAt = docs[0].receivedAt.toISOString();
 
       return NextResponse.json({
         status: "ok",

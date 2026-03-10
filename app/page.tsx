@@ -262,7 +262,7 @@ export default function DashboardPage() {
               return (
                 <div key={device.deviceId} className="relative">
                   {isStale && (
-                    <div className="absolute inset-x-0 -top-0 z-10 flex items-center gap-1.5 rounded-t-xl border border-amber-500/30 bg-amber-500/10 px-3 py-1.5">
+                    <div className="absolute inset-x-0 top-0 z-10 flex items-center gap-1.5 rounded-t-xl border border-amber-500/30 bg-amber-500/10 px-3 py-1.5">
                       <Clock className="h-3 w-3 text-amber-400" />
                       <span className="text-[11px] font-medium text-amber-400">
                         Stale — last seen {Math.floor(readingAge / 60000)}m ago · waiting for new uplink
