@@ -3,6 +3,63 @@
 > **Microsoft AI Unlock Hackathon · AI for India Track**  
 > Built by **DualCode Team** — Raj Rabidas & Mansi Rajput, IIT Roorkee
 
+**🌐 Live Dashboard →** [jalrakshak-ai-dualcore.vercel.app](https://jalrakshak-ai-dualcore.vercel.app/)  
+**📖 Docs / Circuit Diagram / Code Generator →** [jalrakshak-ai-dualcore.vercel.app/docs](https://jalrakshak-ai-dualcore.vercel.app/docs)
+
+---
+
+## Quick Start — Flash Your ESP32 Node
+
+> **Template sketch:** [`JalRakshak_Node_Template.ino`](./JalRakshak_Node_Template.ino)  
+> Full interactive code generator (paste your keys, download the sketch): [/docs](https://jalrakshak-ai-dualcore.vercel.app/docs#arduino-code)
+
+### What you need from the TTN Console
+
+| Credential | Format | Where to find it |
+|---|---|---|
+| **DevEUI** | 8 bytes, **LSB** (use the ↕ toggle) | TTN Console → End Device → Overview |
+| **AppKey** | 16 bytes, **MSB** | TTN Console → End Device → Overview |
+| **AppEUI** | 8 bytes, all zeros | Leave as-is (default) |
+
+### Open `JalRakshak_Node_Template.ino` and replace these lines
+
+```cpp
+// DevEUI — 8 bytes LSB
+static const u1_t PROGMEM DEVEUI[8] = {
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00   // <-- YOUR DEVEUI
+};
+
+// AppKey — 16 bytes MSB
+static const u1_t PROGMEM APPKEY[16] = {
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   // <-- YOUR APPKEY
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00    // <-- (cont.)
+};
+```
+
+### Required Arduino libraries
+
+```
+MCCI LoRaWAN LMIC  ·  OneWire  ·  DallasTemperature
+Adafruit SSD1306   ·  Adafruit GFX  ·  ESP32 board package
+```
+
+### Circuit connections (at a glance)
+
+| Sensor / Module | ESP32 GPIO |
+|---|---|
+| LoRa SX1276 NSS | GPIO 5 |
+| LoRa SX1276 RST | GPIO 26 |
+| LoRa DIO0 / DIO1 / DIO2 | GPIO 25 / 33 / 32 |
+| LoRa MOSI / MISO / SCK | GPIO 23 / 19 / 18 |
+| TDS sensor (analog) | GPIO 2 |
+| pH sensor (analog) | GPIO 34 |
+| DS18B20 temperature (1-Wire) | GPIO 14 |
+| OLED SDA / SCL | GPIO 21 / 22 |
+
+> Full wiring diagram with component photos: [jalrakshak-ai-dualcore.vercel.app/docs#hardware](https://jalrakshak-ai-dualcore.vercel.app/docs#hardware)
+
+---
+
 Real-time water quality monitoring powered by LoRaWAN IoT sensor nodes and an AI prediction engine. Physical sensors (ESP32 + LoRa SX1276) transmit pH, TDS, and temperature over The Things Network (TTN). A Next.js dashboard receives data via TTN webhook, persists it in MongoDB, and runs AI-based water safety predictions.
 
 ---
