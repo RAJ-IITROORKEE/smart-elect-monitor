@@ -100,7 +100,7 @@ Real-time water quality monitoring powered by LoRaWAN IoT sensor nodes and an AI
 | Database | MongoDB via Mongoose v9 |
 | IoT Network | The Things Network (TTN) — LoRaWAN |
 | Hardware | ESP32 + LoRa SX1276 |
-| AI Engine (primary) | Python FastAPI + Random Forest (scikit-learn, 3,276 samples) |
+| AI Engine (primary) | Python FastAPI + Random Forest (scikit-learn, 3,276 samples) — [GitHub: Jalrakshak-ai-model](https://github.com/RAJ-IITROORKEE/Jalrakshak-ai-model) |
 | AI Engine (fallback) | TypeScript threshold-based engine (built-in) |
 | Deployment | Vercel (frontend), Railway (Python model server) |
 
@@ -206,7 +206,9 @@ The TypeScript fallback engine (`lib/predict.ts`) mirrors the Python Random Fore
 - **Recommended actions**: remediation advice per threshold violation
 - **Future risk**: ring buffer of last 5 readings detects rising turbidity or TDS trends
 
-The primary engine is a **Random Forest classifier** (scikit-learn) trained on `water_potability.csv` (3,276 samples), served via FastAPI in the `JALRASHAK-AI-MODEL/` service.
+The primary engine is a **Random Forest classifier** (scikit-learn) trained on `water_potability.csv` (3,276 samples), served via FastAPI.  
+**Model server source code →** [github.com/RAJ-IITROORKEE/Jalrakshak-ai-model](https://github.com/RAJ-IITROORKEE/Jalrakshak-ai-model)  
+Deploy it to Railway, copy the public URL, and set `FASTAPI_URL` in your `.env.local`.
 
 ---
 
@@ -248,7 +250,8 @@ RELAY_URL=https://iot-smart-park.vercel.app/api/ttn/jalrakshak-ai
 
 - Node.js 20+
 - A MongoDB Atlas cluster (or local MongoDB instance)
-- (Optional) A running instance of the `JALRASHAK-AI-MODEL` Python server
+- (Optional) Python FastAPI model server — [github.com/RAJ-IITROORKEE/Jalrakshak-ai-model](https://github.com/RAJ-IITROORKEE/Jalrakshak-ai-model)  
+  Deploy to Railway and set `FASTAPI_URL` in `.env.local` (see Environment Variables)
 
 ### Installation
 
