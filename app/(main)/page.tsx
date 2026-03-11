@@ -6,8 +6,8 @@ import { DeviceCard } from "@/components/device-card";
 import { HeroSection } from "@/components/hero-section";
 import { StatsBar } from "@/components/stats-bar";
 import { ModelSimulator } from "@/components/model-simulator";
-import { mergeIntoHistory } from "@/lib/local-history";
-import { Wifi, WifiOff, RefreshCw, Clock, FlaskConical, X } from "lucide-react";
+
+import { Wifi, WifiOff, RefreshCw, FlaskConical, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const POLL_INTERVAL_MS = 30_000; // 30s — keeps stats fresh
@@ -54,7 +54,7 @@ async function buildDeviceCards(
 
 export default function DashboardPage() {
   const [devices, setDevices] = useState<DeviceReading[]>([]);
-  // deviceId → full history from localStorage
+  // deviceId → reading history from MongoDB
   const [deviceHistories, setDeviceHistories] = useState<Map<string, SensorReading[]>>(
     new Map()
   );
@@ -93,10 +93,7 @@ export default function DashboardPage() {
         ? new Date(readings[0].receivedAt)
         : new Date();
 
-      // ── Persist into localStorage and get full history ──────────────────
-      const allHistory = mergeIntoHistory(readings);
-
-      // ── Build latest-per-device map (newest first from relay) ────────────
+      // ── Build latest-per-device map (API already returns one per device) ─
       const latestPerDevice = new Map<string, SensorReading>();
       for (const r of readings) {
         if (!latestPerDevice.has(r.deviceId)) {
@@ -104,13 +101,12 @@ export default function DashboardPage() {
         }
       }
 
-      // ── Build per-device history maps from localStorage ──────────────────
+      // ── Per-device history comes from MongoDB via API ────────────────────
       const historyMap = new Map<string, SensorReading[]>();
-      for (const deviceId of latestPerDevice.keys()) {
-        historyMap.set(
-          deviceId,
-          allHistory.filter((r) => r.deviceId === deviceId).slice(0, 50)
-        );
+      if (json.histories && typeof json.histories === "object") {
+        for (const [deviceId, history] of Object.entries(json.histories)) {
+          historyMap.set(deviceId, history as SensorReading[]);
+        }
       }
 
       // ── Run AI predictions for each device ──────────────────────────────
@@ -254,27 +250,18 @@ export default function DashboardPage() {
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {devices.map((device) => {
               const readingAge = device.receivedAt
-                ? Date.now() - new Date(device.receivedAt).getTime()
+                ? now - new Date(device.receivedAt).getTime()
                 : device.timestamp
-                ? Date.now() - new Date(device.timestamp).getTime()
+                ? now - new Date(device.timestamp).getTime()
                 : 0;
-              const isStale = readingAge > STALE_THRESHOLD_MS;
+              const isOffline = readingAge > STALE_THRESHOLD_MS;
               return (
-                <div key={device.deviceId} className="relative">
-                  {isStale && (
-                    <div className="absolute inset-x-0 top-0 z-10 flex items-center gap-1.5 rounded-t-xl border border-amber-500/30 bg-amber-500/10 px-3 py-1.5">
-                      <Clock className="h-3 w-3 text-amber-400" />
-                      <span className="text-[11px] font-medium text-amber-400">
-                        Stale — last seen {Math.floor(readingAge / 60000)}m ago · waiting for new uplink
-                      </span>
-                    </div>
-                  )}
-                  <div className={cn(isStale && "opacity-60 mt-7")}>
-                    <DeviceCard
-                      device={device}
-                      history={deviceHistories.get(device.deviceId) ?? []}
-                    />
-                  </div>
+                <div key={device.deviceId} className={cn(isOffline && "opacity-75")}>
+                  <DeviceCard
+                    device={device}
+                    history={deviceHistories.get(device.deviceId) ?? []}
+                    isOffline={isOffline}
+                  />
                 </div>
               );
             })}

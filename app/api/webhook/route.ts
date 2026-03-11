@@ -11,9 +11,8 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { SensorReading } from "@/types";
-import { connectDB } from "@/lib/db";
-import { Reading } from "@/models/Reading";
-import { Device } from "@/models/Device";
+import { prisma } from "@/lib/prisma";
+import { predictWaterQuality } from "@/lib/predict";
 
 const TTN_SECRET = process.env.TTN_WEBHOOK_SECRET || null;
 
@@ -91,36 +90,94 @@ export async function POST(req: NextRequest) {
       ((settings?.data_rate as Record<string, unknown>)?.lora as Record<string, unknown>)?.spreading_factor as number ?? null,
   };
 
-  // ── Persist to MongoDB ───────────────────────────────────────────────────
+  // ── Persist to MongoDB via Prisma ──────────────────────────────────────
   try {
-    await connectDB();
+    // Run AI prediction inline so it is saved with the reading
+    let pred: ReturnType<typeof predictWaterQuality> | null = null;
+    if (
+      reading.ph != null &&
+      reading.tds != null &&
+      reading.conductivity != null &&
+      reading.turbidity != null
+    ) {
+      try {
+        pred = predictWaterQuality({
+          ph: Number(reading.ph),
+          tds: Number(reading.tds),
+          conductivity: Number(reading.conductivity),
+          turbidity: Number(reading.turbidity),
+        });
+      } catch {
+        // prediction failure must not block the webhook response
+      }
+    }
 
     // Upsert the reading (idempotent on readingId)
-    await Reading.findOneAndUpdate(
-      { readingId: reading.id },
-      {
-        readingId:       reading.id,
-        deviceId:        reading.deviceId,
-        deviceName:      reading.deviceName,
-        timestamp:       new Date(reading.timestamp),
-        receivedAt:      new Date(reading.receivedAt),
-        temperature:     reading.temperature,
-        ph:              reading.ph,
-        tds:             reading.tds,
-        turbidity:       reading.turbidity,
-        conductivity:    reading.conductivity,
-        rssi:            reading.rssi ?? null,
-        snr:             reading.snr ?? null,
-        spreadingFactor: reading.spreadingFactor ?? null,
+    await prisma.reading.upsert({
+      where: { readingId: reading.id },
+      create: {
+        readingId:            reading.id,
+        deviceId:             reading.deviceId,
+        deviceName:           reading.deviceName,
+        timestamp:            new Date(reading.timestamp),
+        receivedAt:           new Date(reading.receivedAt),
+        temperature:          reading.temperature,
+        ph:                   reading.ph,
+        tds:                  reading.tds,
+        turbidity:            reading.turbidity,
+        conductivity:         reading.conductivity,
+        rssi:                 reading.rssi ?? null,
+        snr:                  reading.snr ?? null,
+        spreadingFactor:      reading.spreadingFactor ?? null,
+        predictionStatus:     pred?.water_status ?? null,
+        predictionScore:      pred?.safety_score ?? null,
+        predictionRiskLevel:  pred?.risk_level ?? null,
+        predictionConfidence: pred?.confidence ?? null,
+        predictionCauses:     pred?.possible_causes ?? [],
+        predictionActions:    pred?.recommended_actions ?? [],
+        predictionFutureRisk: pred?.future_risk ?? null,
       },
-      { upsert: true, new: true }
-    );
+      update: {
+        deviceName:           reading.deviceName,
+        timestamp:            new Date(reading.timestamp),
+        receivedAt:           new Date(reading.receivedAt),
+        temperature:          reading.temperature,
+        ph:                   reading.ph,
+        tds:                  reading.tds,
+        turbidity:            reading.turbidity,
+        conductivity:         reading.conductivity,
+        rssi:                 reading.rssi ?? null,
+        snr:                  reading.snr ?? null,
+        spreadingFactor:      reading.spreadingFactor ?? null,
+        predictionStatus:     pred?.water_status ?? null,
+        predictionScore:      pred?.safety_score ?? null,
+        predictionRiskLevel:  pred?.risk_level ?? null,
+        predictionConfidence: pred?.confidence ?? null,
+        predictionCauses:     pred?.possible_causes ?? [],
+        predictionActions:    pred?.recommended_actions ?? [],
+        predictionFutureRisk: pred?.future_risk ?? null,
+      },
+    });
 
     // Upsert device (update last-seen + latest sensor values)
-    await Device.findOneAndUpdate(
-      { deviceId },
-      {
+    await prisma.device.upsert({
+      where: { deviceId },
+      create: {
         deviceId,
+        deviceName:       deviceId,
+        isActive:         true,
+        lastSeen:         new Date(),
+        lastPh:           reading.ph,
+        lastTds:          reading.tds,
+        lastTemperature:  reading.temperature,
+        lastTurbidity:    reading.turbidity,
+        lastConductivity: reading.conductivity,
+        rssi:             reading.rssi ?? null,
+        snr:              reading.snr ?? null,
+        spreadingFactor:  reading.spreadingFactor ?? null,
+        totalReadings:    1,
+      },
+      update: {
         deviceName:       deviceId,
         lastSeen:         new Date(),
         lastPh:           reading.ph,
@@ -131,10 +188,9 @@ export async function POST(req: NextRequest) {
         rssi:             reading.rssi ?? null,
         snr:              reading.snr ?? null,
         spreadingFactor:  reading.spreadingFactor ?? null,
-        $inc:             { totalReadings: 1 },
+        totalReadings:    { increment: 1 },
       },
-      { upsert: true, new: true }
-    );
+    });
 
     console.log(`[JalRakshak] ✅ Saved to MongoDB | device=${deviceId}`);
   } catch (dbErr) {

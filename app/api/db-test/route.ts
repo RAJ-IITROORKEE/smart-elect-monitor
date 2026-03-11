@@ -5,19 +5,15 @@
  */
 
 import { NextResponse } from "next/server";
-import { connectDB } from "@/lib/db";
-import { Device } from "@/models/Device";
-import { Reading } from "@/models/Reading";
+import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    await connectDB();
-
     const [deviceCount, readingCount] = await Promise.all([
-      Device.countDocuments(),
-      Reading.countDocuments(),
+      prisma.device.count(),
+      prisma.reading.count(),
     ]);
 
     return NextResponse.json({

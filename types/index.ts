@@ -12,6 +12,19 @@ export interface SensorReading {
   rssi?: number | null;
   snr?: number | null;
   spreadingFactor?: number | null;
+  /** AI prediction saved alongside this reading in MongoDB */
+  savedPrediction?: SavedPrediction | null;
+}
+
+/** Slimmed-down prediction stored per reading in DB */
+export interface SavedPrediction {
+  status: string;          // "Safe" | "Unsafe"
+  score: number;
+  riskLevel: string;       // "Low" | "Moderate" | "High"
+  confidence: string;
+  causes: string[];
+  actions: string[];
+  futureRisk: string | null;
 }
 
 export interface WaterPrediction {

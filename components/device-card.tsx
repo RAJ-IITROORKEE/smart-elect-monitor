@@ -19,6 +19,8 @@ import {
   Clock,
   ChevronDown,
   ChevronUp,
+  WifiOff,
+  Wifi,
 } from "lucide-react";
 import { useState } from "react";
 import { SensorHistoryChart } from "@/components/sensor-history-chart";
@@ -26,6 +28,7 @@ import { SensorHistoryChart } from "@/components/sensor-history-chart";
 interface DeviceCardProps {
   device: DeviceReading;
   history: SensorReading[];
+  isOffline?: boolean;
 }
 
 function SensorMetric({
@@ -100,7 +103,7 @@ function formatRelativeTime(ts: string): string {
   return `${Math.floor(hrs / 24)}d ago`;
 }
 
-export function DeviceCard({ device, history }: DeviceCardProps) {
+export function DeviceCard({ device, history, isOffline = false }: DeviceCardProps) {
   const [expanded, setExpanded] = useState(false);
   const { prediction } = device;
 
@@ -149,25 +152,48 @@ export function DeviceCard({ device, history }: DeviceCardProps) {
             </CardTitle>
           </div>
 
-          {prediction ? (
-            <Badge variant={isSafe ? "success" : "destructive"} className="shrink-0">
-              {isSafe ? (
-                <CheckCircle2 className="mr-1 h-3 w-3" />
-              ) : (
-                <AlertTriangle className="mr-1 h-3 w-3" />
-              )}
-              {prediction.water_status}
-            </Badge>
-          ) : (
-            <Badge variant="outline" className="shrink-0 text-muted-foreground">
-              Pending
-            </Badge>
-          )}
+          <div className="flex flex-col items-end gap-1.5 shrink-0">
+            {/* Live / Offline connection status badge */}
+            {isOffline ? (
+              <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-400">
+                <WifiOff className="h-3 w-3" />
+                Offline
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-400">
+                <span className="relative flex h-2 w-2">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+                </span>
+                <Wifi className="h-3 w-3" />
+                Live
+              </span>
+            )}
+
+            {/* Water quality prediction badge */}
+            {prediction ? (
+              <Badge variant={isSafe ? "success" : "destructive"} className="shrink-0">
+                {isSafe ? (
+                  <CheckCircle2 className="mr-1 h-3 w-3" />
+                ) : (
+                  <AlertTriangle className="mr-1 h-3 w-3" />
+                )}
+                {prediction.water_status}
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="shrink-0 text-muted-foreground">
+                Pending
+              </Badge>
+            )}
+          </div>
         </div>
 
         <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
           <Clock className="h-3 w-3" />
-          <span>{formatRelativeTime(device.timestamp)}</span>
+          <span>
+            {isOffline ? "Last seen " : "Updated "}
+            {formatRelativeTime(device.receivedAt ?? device.timestamp)}
+          </span>
           {device.rssi != null && (
             <>
               <span className="mx-1 text-border">·</span>

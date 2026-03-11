@@ -1,0 +1,73 @@
+// Prisma schema for JalRakshak AI — MongoDB
+// Docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+// ── Device: one per IoT node, managed from admin dashboard ─────────────────
+model Device {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  deviceId    String   @unique          // TTN device_id e.g. "hydro-monitor-01"
+  deviceName  String   @default("")
+  isActive    Boolean  @default(true)   // soft-delete / disable
+  lastSeen    DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Cached latest sensor values (updated on every webhook/relay sync)
+  lastTemperature  Float?
+  lastPh           Float?
+  lastTds          Float?
+  lastTurbidity    Float?
+  lastConductivity Float?
+  rssi             Int?
+  snr              Float?
+  spreadingFactor  Int?
+  totalReadings    Int    @default(0)
+
+  readings Reading[]
+
+  @@map("devices")
+}
+
+// ── Reading: one per TTN uplink, with inline prediction ────────────────────
+model Reading {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  readingId   String   @unique          // crypto.randomUUID()
+  deviceId    String
+  deviceName  String   @default("")
+  timestamp   DateTime                  // TTN received_at
+  receivedAt  DateTime @default(now())  // server ingest time
+
+  // Sensor values
+  temperature  Float?
+  ph           Float?
+  tds          Float?
+  turbidity    Float?
+  conductivity Float?
+
+  // LoRa metadata
+  rssi            Int?
+  snr             Float?
+  spreadingFactor Int?
+
+  // AI prediction saved inline
+  predictionStatus     String?    // "Safe" | "Unsafe"
+  predictionScore      Float?     // 0-100
+  predictionRiskLevel  String?    // "Low" | "Moderate" | "High"
+  predictionConfidence String?
+  predictionCauses     String[]
+  predictionActions    String[]
+  predictionFutureRisk String?
+
+  device Device? @relation(fields: [deviceId], references: [deviceId])
+
+  @@index([deviceId, receivedAt(sort: Desc)])
+  @@map("readings")
+}
