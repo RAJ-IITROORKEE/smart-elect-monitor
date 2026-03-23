@@ -89,18 +89,29 @@ export default function InstallationPage() {
                 <div className="font-medium text-foreground mb-2">ESP32 LoRaWAN Device:</div>
                 <div className="space-y-1 ml-4">
                   <div>• ESP32 Development Board (30-pin)</div>
-                  <div>• LoRaWAN Module (SX1276/SX1278 - 868 MHz)</div>
+                  <div className="flex items-center gap-2">
+                    <span>• Recommended:</span>
+                    <a 
+                      href="https://www.pandabyte.in/product-page/pandabyte-xlora-esp32-lora-microcontroller-board-arduino-compatible" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-primary hover:underline text-xs"
+                    >
+                      PandaByte xLoRa ESP32 →
+                    </a>
+                  </div>
+                  <div>• LoRaWAN Module (SX1276/SX1278 - 868/915 MHz)</div>
                   <div>• pH Sensor with analog probe</div>
                   <div>• TDS (Total Dissolved Solids) sensor</div>
                   <div>• DS18B20 waterproof temperature probe</div>
-                  <div>• OLED Display (128×64 SSD1306)</div>
+                  <div>• OLED Display (128×64 SSD1306, I²C)</div>
                 </div>
               </div>
               <div>
                 <div className="font-medium text-foreground mb-2">Additional Components:</div>
                 <div className="space-y-1 ml-4">
-                  <div>• USB Cable for programming</div>
-                  <div>• LiPo 3.7V battery + TP4056 charger</div>
+                  <div>• USB Cable (Type-C or Micro-USB) for programming</div>
+                  <div>• LiPo 3.7V battery + TP4056 charger (optional)</div>
                   <div>• 4.7 kΩ resistor (for DS18B20 pull-up)</div>
                   <div>• Jumper wires for connections</div>
                   <div>• Breadboard or PCB for assembly</div>

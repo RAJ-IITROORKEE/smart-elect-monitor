@@ -36,6 +36,31 @@ export default function CircuitDiagramPage() {
         <p className="text-xl text-muted-foreground leading-relaxed">
           Hardware wiring diagrams, pin connections, and system flowchart for JalRakshak.AI water monitoring nodes.
         </p>
+        <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
+          <h3 className="font-semibold text-primary mb-2 flex items-center gap-2">
+            <CircuitBoard className="h-5 w-5" />
+            Recommended ESP32 Board
+          </h3>
+          <div className="text-sm text-muted-foreground">
+            <p className="mb-2">
+              This project is designed to work with standard ESP32 development boards with external LoRa modules.
+            </p>
+            <p className="mb-2">
+              <strong className="text-foreground">Recommended Board:</strong> PandaByte xLoRa ESP32 LoRaWAN Development Board (ESP32-WROOM-32E with integrated RA-01H LoRa module)
+            </p>
+            <a 
+              href="https://www.pandabyte.in/product-page/pandabyte-xlora-esp32-lora-microcontroller-board-arduino-compatible" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 text-primary hover:underline text-sm"
+            >
+              Purchase PandaByte xLoRa Board (₹3,000) →
+            </a>
+            <p className="text-xs mt-2 text-muted-foreground">
+              Note: If using the PandaByte xLoRa board, the LoRa module is already integrated. The pin connections below are for reference with external SX1276 modules on standard ESP32 boards.
+            </p>
+          </div>
+        </div>
         <div className="flex flex-wrap gap-2">
           <Badge className="bg-cyan-500/15 text-cyan-500 border border-cyan-500/30">ESP32</Badge>
           <Badge className="bg-purple-500/15 text-purple-500 border border-purple-500/30">LoRa SX1276</Badge>
@@ -231,6 +256,16 @@ export default function CircuitDiagramPage() {
                 <span>WiFi/BT:</span>
                 <Badge variant="outline" className="text-xs">Supported</Badge>
               </div>
+              <div className="pt-2 border-t border-border">
+                <a 
+                  href="https://www.pandabyte.in/product-page/pandabyte-xlora-esp32-lora-microcontroller-board-arduino-compatible" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline text-xs"
+                >
+                  Buy PandaByte xLoRa →
+                </a>
+              </div>
             </CardContent>
           </Card>
 
@@ -238,13 +273,13 @@ export default function CircuitDiagramPage() {
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2">
                 <Radio className="h-5 w-5 text-primary" />
-                LoRa SX1276
+                LoRa SX1276/RA-01H
               </CardTitle>
             </CardHeader>
             <CardContent className="text-sm text-muted-foreground space-y-2">
               <div className="flex justify-between">
                 <span>Frequency:</span>
-                <span className="text-foreground font-mono">868 MHz</span>
+                <span className="text-foreground font-mono">868/915 MHz</span>
               </div>
               <div className="flex justify-between">
                 <span>Current (TX):</span>
