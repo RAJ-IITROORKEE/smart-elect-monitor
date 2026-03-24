@@ -1,9 +1,17 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { 
   CircuitBoard,
   Radio,
@@ -15,15 +23,31 @@ import {
   RotateCcw,
   Image as ImageIcon,
   Droplet,
-  CheckCircle
+  CheckCircle,
+  Maximize2,
+  Download,
+  X,
 } from "lucide-react";
 
 export default function CircuitDiagramPage() {
   const [zoom, setZoom] = useState(100);
+  const [flowZoom, setFlowZoom] = useState(100);
+  const [flowDialogOpen, setFlowDialogOpen] = useState(false);
+  const [flowDialogZoom, setFlowDialogZoom] = useState(100);
+  const [flowchartLoadError, setFlowchartLoadError] = useState(false);
 
   const handleZoomIn = () => setZoom(prev => Math.min(prev + 10, 200));
   const handleZoomOut = () => setZoom(prev => Math.max(prev - 10, 50));
   const handleZoomReset = () => setZoom(100);
+
+  const handleFlowZoomIn = () => setFlowZoom((prev) => Math.min(prev + 15, 250));
+  const handleFlowZoomOut = () => setFlowZoom((prev) => Math.max(prev - 15, 50));
+  const handleFlowZoomReset = () => setFlowZoom(100);
+
+  const handleOpenFlowPreview = () => {
+    setFlowDialogZoom(100);
+    setFlowDialogOpen(true);
+  };
 
   return (
     <div className="space-y-8">
@@ -125,31 +149,203 @@ export default function CircuitDiagramPage() {
         </CardContent>
       </Card>
 
-      {/* System Flowchart - Placeholder */}
+      {/* System Flowchart */}
       <Card className="border-border/60">
-        <CardHeader>
-          <CardTitle className="text-2xl text-primary flex items-center gap-2">
-            <Droplet className="h-6 w-6" />
-            System Flowchart
-          </CardTitle>
+        <CardHeader className="pb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <CardTitle className="text-2xl text-primary flex items-center gap-2">
+              <Droplet className="h-6 w-6" />
+              System Flowchart
+            </CardTitle>
+
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Zoom Controls Group */}
+              <div className="flex items-center gap-1 rounded-md border border-border bg-muted/50 p-1">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-8 w-8 p-0"
+                  onClick={handleFlowZoomOut}
+                  title="Zoom out"
+                >
+                  <ZoomOut className="h-4 w-4" />
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-8 w-8 p-0"
+                  onClick={handleFlowZoomReset}
+                  title="Reset zoom"
+                >
+                  <RotateCcw className="h-4 w-4" />
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-8 w-8 p-0"
+                  onClick={handleFlowZoomIn}
+                  title="Zoom in"
+                >
+                  <ZoomIn className="h-4 w-4" />
+                </Button>
+                <Badge variant="secondary" className="ml-1 font-mono text-xs">
+                  {flowZoom}%
+                </Badge>
+              </div>
+              
+              <Button 
+                variant="default" 
+                size="sm" 
+                onClick={handleOpenFlowPreview}
+                disabled={flowchartLoadError}
+              >
+                <Maximize2 className="mr-1.5 h-4 w-4" />
+                Preview Full
+              </Button>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
-          {/* Placeholder for flowchart */}
-          <div className="bg-muted/50 border-2 border-dashed border-border rounded-lg p-12 text-center">
-            <div className="flex flex-col items-center justify-center min-h-[300px]">
-              <Zap className="h-20 w-20 text-muted-foreground/50 mb-4" />
-              <h3 className="text-xl font-semibold text-muted-foreground mb-2">System Flowchart Placeholder</h3>
-              <p className="text-sm text-muted-foreground max-w-md">
-                This is a placeholder for the system flowchart showing data flow from sensors 
-                → ESP32 → LoRaWAN → TTN → Dashboard → AI Predictions.
-              </p>
-              <p className="text-xs text-muted-foreground mt-4 italic">
-                Flowchart will be added by the user
-              </p>
-            </div>
+          {/* Flowchart Container */}
+          <div className="overflow-auto rounded-xl border border-border bg-gradient-to-br from-muted/30 to-muted/10 p-4 max-h-[600px]">
+            {flowchartLoadError ? (
+              <div className="flex min-h-[300px] flex-col items-center justify-center text-center">
+                <Zap className="mb-4 h-16 w-16 text-muted-foreground/50" />
+                <h3 className="text-lg font-semibold text-foreground">Flowchart image not found</h3>
+                <p className="mt-2 max-w-lg text-sm text-muted-foreground">
+                  Place the file at <code className="rounded bg-muted px-1.5 py-0.5">/public/flowchart_jalrakshak_ai.svg</code> and refresh this page.
+                </p>
+              </div>
+            ) : (
+              <div 
+                className="transition-all duration-200 ease-out"
+                style={{ 
+                  width: `${flowZoom}%`,
+                  minWidth: '500px',
+                  maxWidth: '3000px'
+                }}
+              >
+                <Image
+                  src="/flowchart_jalrakshak_ai.svg"
+                  alt="JalRakshak AI complete system flowchart"
+                  width={2200}
+                  height={1400}
+                  unoptimized
+                  className="h-auto w-full rounded-lg shadow-md"
+                  onError={() => setFlowchartLoadError(true)}
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Action Buttons */}
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            <Button 
+              variant="secondary" 
+              size="sm" 
+              onClick={handleOpenFlowPreview} 
+              disabled={flowchartLoadError}
+            >
+              <Maximize2 className="mr-1.5 h-4 w-4" />
+              Open Large Preview
+            </Button>
+            <Button asChild variant="outline" size="sm">
+              <a 
+                href="/flowchart_jalrakshak_ai.svg" 
+                download="flowchart_jalrakshak_ai.svg"
+                className={flowchartLoadError ? "pointer-events-none opacity-50" : ""}
+              >
+                <Download className="mr-1.5 h-4 w-4" />
+                Download SVG
+              </a>
+            </Button>
           </div>
         </CardContent>
       </Card>
+
+      <Dialog open={flowDialogOpen} onOpenChange={setFlowDialogOpen}>
+        <DialogContent 
+          className="!max-w-[96vw] !w-[96vw] h-[94vh] max-h-[94vh] overflow-hidden p-0 flex flex-col" 
+          showCloseButton={false}
+        >
+          {/* Modal Header with Controls */}
+          <DialogHeader className="flex-shrink-0 border-b border-border bg-background/95 backdrop-blur-sm px-4 py-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="min-w-0">
+                <DialogTitle className="text-lg font-semibold">System Flowchart - Full Preview</DialogTitle>
+                <DialogDescription className="text-sm">
+                  Zoom in to inspect each stage of the JalRakshak.AI data flow.
+                </DialogDescription>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="flex items-center gap-1 rounded-md border border-border bg-muted/50 p-1">
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="h-8 w-8 p-0"
+                    onClick={() => setFlowDialogZoom((z) => Math.max(z - 15, 30))}
+                  >
+                    <ZoomOut className="h-4 w-4" />
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="h-8 w-8 p-0"
+                    onClick={() => setFlowDialogZoom(100)}
+                  >
+                    <RotateCcw className="h-4 w-4" />
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="h-8 w-8 p-0"
+                    onClick={() => setFlowDialogZoom((z) => Math.min(z + 15, 300))}
+                  >
+                    <ZoomIn className="h-4 w-4" />
+                  </Button>
+                  <Badge variant="secondary" className="ml-1 font-mono text-xs">
+                    {flowDialogZoom}%
+                  </Badge>
+                </div>
+                
+                <Button asChild variant="outline" size="sm">
+                  <a href="/flowchart_jalrakshak_ai.svg" download="flowchart_jalrakshak_ai.svg">
+                    <Download className="mr-1.5 h-4 w-4" />
+                    Download
+                  </a>
+                </Button>
+                <Button variant="destructive" size="sm" onClick={() => setFlowDialogOpen(false)}>
+                  <X className="mr-1.5 h-4 w-4" />
+                  Close
+                </Button>
+              </div>
+            </div>
+          </DialogHeader>
+
+          {/* Scrollable Flowchart Container */}
+          <div className="flex-1 overflow-auto bg-gradient-to-br from-muted/30 to-muted/10 p-6">
+            <div 
+              className="mx-auto transition-all duration-200 ease-out"
+              style={{ 
+                width: `${flowDialogZoom}%`,
+                minWidth: '600px',
+                maxWidth: '4000px'
+              }}
+            >
+              <Image
+                src="/flowchart_jalrakshak_ai.svg"
+                alt="JalRakshak AI complete system flowchart"
+                width={2200}
+                height={1400}
+                unoptimized
+                priority
+                className="h-auto w-full rounded-lg shadow-lg"
+              />
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Pin Connections - LoRa Module */}
       <Card className="border-border/60">
