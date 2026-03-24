@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { invalidateDeviceContextCache } from "@/lib/device-context-cache";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +31,8 @@ export async function PUT(
       },
     });
 
+    invalidateDeviceContextCache(id);
+
     return NextResponse.json({ status: "ok", data: updated });
   } catch (err) {
     return NextResponse.json({ status: "error", message: String(err) }, { status: 500 });
@@ -53,6 +56,8 @@ export async function DELETE(
       prisma.reading.deleteMany({ where: { deviceId: id } }),
       prisma.device.delete({ where: { deviceId: id } }),
     ]);
+
+    invalidateDeviceContextCache(id);
 
     return NextResponse.json({
       status: "ok",

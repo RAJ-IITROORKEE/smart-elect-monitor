@@ -8,8 +8,7 @@
  * - Calculated statistics
  */
 
-import { prisma } from "@/lib/prisma";
-import { calculateDeviceStats } from "@/lib/chat-context";
+import { getDeviceContext } from "@/lib/device-context-cache";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(
@@ -18,33 +17,20 @@ export async function GET(
 ) {
   try {
     const { deviceId } = await params;
+    const forceRefresh = req.nextUrl.searchParams.get("forceRefresh") === "true";
+    const context = await getDeviceContext(deviceId, forceRefresh);
 
-    // Fetch device
-    const device = await prisma.device.findUnique({
-      where: { deviceId },
-    });
-
-    if (!device) {
+    if (!context) {
       return NextResponse.json(
         { error: "Device not found" },
         { status: 404 }
       );
     }
 
-    // Fetch readings (limit to last 500 for performance)
-    const readings = await prisma.reading.findMany({
-      where: { deviceId },
-      orderBy: { receivedAt: "desc" },
-      take: 500,
-    });
-
-    // Calculate statistics
-    const stats = calculateDeviceStats(readings);
-
     return NextResponse.json({
-      device,
-      readings,
-      stats,
+      device: context.device,
+      readings: context.readings,
+      stats: context.stats,
     });
   } catch (error) {
     console.error("Error fetching device context:", error);

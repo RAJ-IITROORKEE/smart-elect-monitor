@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { invalidateDeviceContextCache } from "@/lib/device-context-cache";
 
 export const dynamic = "force-dynamic";
 
@@ -48,6 +49,8 @@ export async function POST(req: NextRequest) {
         totalReadings: 0,
       },
     });
+
+    invalidateDeviceContextCache(device.deviceId);
 
     return NextResponse.json({ status: "ok", data: device }, { status: 201 });
   } catch (err) {

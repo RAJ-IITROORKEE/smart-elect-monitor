@@ -12,7 +12,7 @@ import {
   createChatCompletion,
   createChatCompletionStream,
 } from "@/lib/openrouter";
-import { buildDeviceContext, calculateDeviceStats } from "@/lib/chat-context";
+import { getDeviceContext } from "@/lib/device-context-cache";
 import { JALRAKSHAK_SYSTEM_PROMPT } from "@/lib/chat-prompts";
 import { DEFAULT_CHAT_MODEL, isAllowedChatModel } from "@/lib/chat-models";
 import { NextRequest, NextResponse } from "next/server";
@@ -50,30 +50,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Fetch device context
-    const device = await prisma.device.findUnique({
-      where: { deviceId },
-    });
-
-    if (!device) {
+    const deviceContext = await getDeviceContext(deviceId);
+    if (!deviceContext) {
       return NextResponse.json(
         { error: "Device not found" },
         { status: 404 }
       );
     }
 
-    // Fetch readings
-    const readings = await prisma.reading.findMany({
-      where: { deviceId },
-      orderBy: { receivedAt: "desc" },
-      take: 500,
-    });
-
-    // Calculate stats
-    const stats = calculateDeviceStats(readings);
-
-    // Build context string
-    const contextStr = buildDeviceContext(device, readings, stats);
+    const { contextStr } = deviceContext;
 
     // Prepare messages for OpenRouter
     const messages: ChatMessage[] = [

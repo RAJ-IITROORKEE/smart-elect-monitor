@@ -17,6 +17,7 @@ import { prisma } from "@/lib/prisma";
 import { SensorReading } from "@/types";
 import { predictWaterQuality } from "@/lib/predict";
 import { createAlertNotification } from "@/lib/alert-notifications";
+import { invalidateDeviceContextCache } from "@/lib/device-context-cache";
 import type { Reading as PrismaReading, Device as PrismaDevice } from "@prisma/client";
 
 const HISTORY_LIMIT = 50;
@@ -251,6 +252,8 @@ async function syncFromRelay() {
           totalReadings:    { increment: 1 },
         },
       });
+
+      invalidateDeviceContextCache(deviceId);
 
       console.log(`[sensor-data] ✅ Synced from relay | device=${deviceId} | pH=${ph} | TDS=${tds}`);
     }

@@ -14,6 +14,7 @@ import { SensorReading } from "@/types";
 import { prisma } from "@/lib/prisma";
 import { predictWaterQuality } from "@/lib/predict";
 import { createAlertNotification } from "@/lib/alert-notifications";
+import { invalidateDeviceContextCache } from "@/lib/device-context-cache";
 
 const TTN_SECRET = process.env.TTN_WEBHOOK_SECRET || null;
 
@@ -192,6 +193,8 @@ export async function POST(req: NextRequest) {
         totalReadings:    { increment: 1 },
       },
     });
+
+    invalidateDeviceContextCache(deviceId);
 
     if (pred) {
       await createAlertNotification({

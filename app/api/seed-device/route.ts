@@ -8,6 +8,7 @@
 
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { invalidateDeviceContextCache } from "@/lib/device-context-cache";
 
 export const dynamic = "force-dynamic";
 
@@ -99,6 +100,8 @@ export async function POST() {
         totalReadings: readingData.length,
       },
     });
+
+    invalidateDeviceContextCache(DEVICE_ID);
 
     return NextResponse.json({
       status: "seeded",
