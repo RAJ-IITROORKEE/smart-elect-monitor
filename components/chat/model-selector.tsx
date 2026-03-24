@@ -16,18 +16,23 @@ import { cn } from "@/lib/utils";
 
 interface ModelSelectorProps {
   value: string;
+  activeValue?: string;
   onChange: (model: string) => void;
   disabled?: boolean;
 }
 
 export function ModelSelector({
   value,
+  activeValue,
   onChange,
   disabled = false,
 }: ModelSelectorProps) {
   const selected =
     CHAT_MODEL_OPTIONS.find((option) => option.id === value) ||
     CHAT_MODEL_OPTIONS[0];
+  const active =
+    CHAT_MODEL_OPTIONS.find((option) => option.id === activeValue) || selected;
+  const isFallbackActive = Boolean(activeValue && activeValue !== value);
 
   return (
     <DropdownMenu>
@@ -46,7 +51,7 @@ export function ModelSelector({
           )}
         >
           <Sparkles className="h-3 w-3 text-primary" />
-          <span className="max-w-[80px] truncate sm:max-w-none">{selected.label}</span>
+          <span className="max-w-[80px] truncate sm:max-w-none">{active.label}</span>
           <ChevronDown className="h-3 w-3 text-muted-foreground" />
         </Button>
       </DropdownMenuTrigger>
@@ -55,6 +60,11 @@ export function ModelSelector({
           <Sparkles className="h-3.5 w-3.5" />
           Select AI Model
         </DropdownMenuLabel>
+        <DropdownMenuSeparator className="my-1" />
+        <div className="rounded-md bg-muted/60 px-2 py-1.5 text-[11px] text-muted-foreground">
+          Active: <span className="font-medium text-foreground">{active.label}</span>
+          {isFallbackActive ? " (auto-fallback)" : ""}
+        </div>
         <DropdownMenuSeparator className="my-1" />
         <DropdownMenuRadioGroup value={value} onValueChange={onChange}>
           {CHAT_MODEL_OPTIONS.map((model) => (

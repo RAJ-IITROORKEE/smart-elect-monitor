@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ChatMessage } from "./chat-message";
 import { ChatInput } from "./chat-input";
 import { ChatSuggestions } from "./chat-suggestions";
+import { ModelSelector } from "./model-selector";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,6 +40,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { DEFAULT_CHAT_MODEL, isAllowedChatModel } from "@/lib/chat-models";
 
 interface Message {
   id: string;
@@ -89,6 +91,15 @@ interface HistoryMessageResponse {
   role: "user" | "assistant" | "system";
   content: string;
   timestamp: string;
+}
+
+interface ChatStreamEvent {
+  delta?: string;
+  done?: boolean;
+  error?: string;
+  model?: string;
+  userMessageId?: string;
+  assistantMessageId?: string;
 }
 
 const SESSION_BREAK_MS = 45 * 60 * 1000;
@@ -209,6 +220,9 @@ export function ChatInterface({ deviceId, device }: ChatInterfaceProps) {
   const [isDeletingSessionId, setIsDeletingSessionId] = useState<string | null>(null);
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
   const [pendingDeleteSession, setPendingDeleteSession] = useState<ChatSession | null>(null);
+  const [selectedModel, setSelectedModel] = useState<string>(DEFAULT_CHAT_MODEL);
+  const [activeModel, setActiveModel] = useState<string>(DEFAULT_CHAT_MODEL);
+  const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const activeSession = useMemo(
@@ -313,10 +327,17 @@ export function ChatInterface({ deviceId, device }: ChatInterfaceProps) {
       content,
       timestamp: new Date(),
     };
+    const assistantDraftId = crypto.randomUUID();
+    const assistantDraft: Message = {
+      id: assistantDraftId,
+      role: "assistant",
+      content: "",
+      timestamp: new Date(),
+    };
 
     setSessions((prev) =>
       withUpdatedSession(prev, targetSessionId, (session) => {
-        const updatedMessages = [...session.messages, userMessage];
+        const updatedMessages = [...session.messages, userMessage, assistantDraft];
         return {
           ...session,
           title:
@@ -330,6 +351,8 @@ export function ChatInterface({ deviceId, device }: ChatInterfaceProps) {
     );
 
     setIsLoading(true);
+    setStreamingMessageId(assistantDraftId);
+    setActiveModel(selectedModel);
 
     try {
       const res = await fetch("/api/chat", {
@@ -338,6 +361,8 @@ export function ChatInterface({ deviceId, device }: ChatInterfaceProps) {
         body: JSON.stringify({
           deviceId,
           message: content,
+          model: selectedModel,
+          stream: true,
           conversationHistory: historyForApi,
         }),
       });
@@ -347,58 +372,201 @@ export function ChatInterface({ deviceId, device }: ChatInterfaceProps) {
         throw new Error(errorData.error || "Failed to get response");
       }
 
-      const data = (await res.json()) as {
-        message: string;
-        userMessageId?: string;
-        assistantMessageId?: string;
-      };
-      const assistantMessage: Message = {
-        id: data.assistantMessageId || crypto.randomUUID(),
-        role: "assistant",
-        content: data.message,
-        timestamp: new Date(),
-      };
+      if (!res.body) {
+        const data = (await res.json()) as {
+          message: string;
+          userMessageId?: string;
+          assistantMessageId?: string;
+          model?: string;
+        };
 
-      setSessions((prev) =>
-        withUpdatedSession(prev, targetSessionId, (session) => {
-          const nextPersistedIds = [...session.persistedMessageIds];
-          if (data.userMessageId) {
-            nextPersistedIds.push(data.userMessageId);
-          }
-          if (data.assistantMessageId) {
-            nextPersistedIds.push(data.assistantMessageId);
-          }
+        if (data.model) {
+          setActiveModel(data.model);
+        }
 
-          return {
+        setSessions((prev) =>
+          withUpdatedSession(prev, targetSessionId, (session) => {
+            const nextPersistedIds = [...session.persistedMessageIds];
+            if (data.userMessageId) nextPersistedIds.push(data.userMessageId);
+            if (data.assistantMessageId) nextPersistedIds.push(data.assistantMessageId);
+
+            return {
+              ...session,
+              updatedAt: new Date(),
+              persistedMessageIds: nextPersistedIds,
+              messages: session.messages.map((msg) =>
+                msg.id === assistantDraftId
+                  ? {
+                      ...msg,
+                      id: data.assistantMessageId || msg.id,
+                      content: data.message,
+                      timestamp: new Date(),
+                    }
+                  : msg
+              ),
+            };
+          })
+        );
+
+        return;
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let fullContent = "";
+      let persistedUserMessageId: string | undefined;
+      let persistedAssistantMessageId: string | undefined;
+
+      const applyAssistantContent = (nextContent: string, nextId?: string) => {
+        setSessions((prev) =>
+          withUpdatedSession(prev, targetSessionId, (session) => ({
             ...session,
-            updatedAt: assistantMessage.timestamp,
-            messages: [...session.messages, assistantMessage],
-            persistedMessageIds: nextPersistedIds,
-          };
-        })
-      );
+            updatedAt: new Date(),
+            messages: session.messages.map((msg) =>
+              msg.id === assistantDraftId
+                ? {
+                    ...msg,
+                    id: nextId || msg.id,
+                    content: nextContent,
+                    timestamp: new Date(),
+                  }
+                : msg
+            ),
+          }))
+        );
+      };
+
+      const finalizePersistedIds = (userId?: string, assistantId?: string) => {
+        if (!userId && !assistantId) return;
+        setSessions((prev) =>
+          withUpdatedSession(prev, targetSessionId, (session) => {
+            const nextPersistedIds = [...session.persistedMessageIds];
+            if (userId) nextPersistedIds.push(userId);
+            if (assistantId) nextPersistedIds.push(assistantId);
+
+            return {
+              ...session,
+              persistedMessageIds: nextPersistedIds,
+            };
+          })
+        );
+      };
+
+      const processEvent = (event: ChatStreamEvent) => {
+        if (event.error) {
+          throw new Error(event.error);
+        }
+
+        if (event.model && isAllowedChatModel(event.model)) {
+          setActiveModel(event.model);
+        }
+
+        if (event.userMessageId) {
+          persistedUserMessageId = event.userMessageId;
+        }
+
+        if (event.assistantMessageId) {
+          persistedAssistantMessageId = event.assistantMessageId;
+        }
+
+        if (typeof event.delta === "string" && event.delta.length > 0) {
+          fullContent += event.delta;
+          applyAssistantContent(fullContent, persistedAssistantMessageId);
+        }
+
+        if (event.done) {
+          if (!fullContent.trim()) {
+            fullContent = "No response generated. Please try again.";
+          }
+          applyAssistantContent(fullContent, persistedAssistantMessageId);
+          finalizePersistedIds(persistedUserMessageId, persistedAssistantMessageId);
+        }
+      };
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed.startsWith("data:")) continue;
+
+          const payload = trimmed.slice(5).trim();
+          if (!payload || payload === "[DONE]") continue;
+
+          try {
+            const event = JSON.parse(payload) as ChatStreamEvent;
+            processEvent(event);
+          } catch (parseError) {
+            console.error("Failed to parse stream payload:", parseError);
+          }
+        }
+      }
+
+      if (buffer.trim().startsWith("data:")) {
+        const payload = buffer.trim().slice(5).trim();
+        if (payload && payload !== "[DONE]") {
+          try {
+            const event = JSON.parse(payload) as ChatStreamEvent;
+            processEvent(event);
+          } catch (parseError) {
+            console.error("Failed to parse final stream payload:", parseError);
+          }
+        }
+      }
+
+      if (!fullContent.trim()) {
+        throw new Error("No response from AI");
+      }
     } catch (error: unknown) {
       const message =
         error instanceof Error
           ? error.message
           : "Sorry, I encountered an error processing your request. Please try again.";
 
-      const errorMessage: Message = {
-        id: crypto.randomUUID(),
-        role: "assistant",
-        content: message,
-        timestamp: new Date(),
-      };
-
       setSessions((prev) =>
-        withUpdatedSession(prev, targetSessionId, (session) => ({
-          ...session,
-          updatedAt: errorMessage.timestamp,
-          messages: [...session.messages, errorMessage],
-        }))
+        withUpdatedSession(prev, targetSessionId, (session) => {
+          const hasDraft = session.messages.some((msg) => msg.id === assistantDraftId);
+
+          if (!hasDraft) {
+            return {
+              ...session,
+              updatedAt: new Date(),
+              messages: [
+                ...session.messages,
+                {
+                  id: crypto.randomUUID(),
+                  role: "assistant",
+                  content: message,
+                  timestamp: new Date(),
+                },
+              ],
+            };
+          }
+
+          return {
+            ...session,
+            updatedAt: new Date(),
+            messages: session.messages.map((msg) =>
+              msg.id === assistantDraftId
+                ? {
+                    ...msg,
+                    content: message,
+                    timestamp: new Date(),
+                  }
+                : msg
+            ),
+          };
+        })
       );
     } finally {
       setIsLoading(false);
+      setStreamingMessageId(null);
     }
   };
 
@@ -636,22 +804,38 @@ export function ChatInterface({ deviceId, device }: ChatInterfaceProps) {
             </div>
           </div>
 
-          <div className="hidden items-center gap-3 text-xs text-muted-foreground sm:flex">
-            <span className="inline-flex items-center gap-1">
-              <Database className="h-3.5 w-3.5" />
-              {device.totalReadings} readings
-            </span>
-            <span className="inline-flex items-center gap-1">
-              <Activity className="h-3.5 w-3.5" />
-              {latestPrediction ?? "No prediction"}
-            </span>
-            <span className="inline-flex items-center gap-1">
-              <Clock3 className="h-3.5 w-3.5" />
-              {toDate(device.lastSeen).toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
-            </span>
+          <div className="flex items-center gap-2">
+            <ModelSelector
+              value={selectedModel}
+              activeValue={activeModel}
+              onChange={(nextModel) => {
+                if (isAllowedChatModel(nextModel)) {
+                  setSelectedModel(nextModel);
+                  if (!isLoading) {
+                    setActiveModel(nextModel);
+                  }
+                }
+              }}
+              disabled={isLoading}
+            />
+
+            <div className="hidden items-center gap-3 text-xs text-muted-foreground sm:flex">
+              <span className="inline-flex items-center gap-1">
+                <Database className="h-3.5 w-3.5" />
+                {device.totalReadings} readings
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <Activity className="h-3.5 w-3.5" />
+                {latestPrediction ?? "No prediction"}
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <Clock3 className="h-3.5 w-3.5" />
+                {toDate(device.lastSeen).toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </span>
+            </div>
           </div>
         </header>
 
@@ -669,6 +853,7 @@ export function ChatInterface({ deviceId, device }: ChatInterfaceProps) {
                         role={message.role}
                         content={message.content}
                         timestamp={message.timestamp}
+                        isStreaming={message.id === streamingMessageId}
                       />
 
                       {message.role === "assistant" && (
@@ -710,17 +895,6 @@ export function ChatInterface({ deviceId, device }: ChatInterfaceProps) {
                 </p>
                 <div className="mt-5">
                   <ChatSuggestions onSelect={sendMessage} disabled={isLoading} />
-                </div>
-              </div>
-            )}
-
-            {isLoading && (
-              <div className="mt-5 flex items-start gap-3">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 ring-1 ring-primary/20">
-                  <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                </div>
-                <div className="rounded-2xl rounded-tl-sm border border-border bg-card px-4 py-3">
-                  <p className="text-sm text-muted-foreground">Analyzing device history and predictions...</p>
                 </div>
               </div>
             )}

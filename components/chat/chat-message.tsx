@@ -9,9 +9,10 @@ interface ChatMessageProps {
   role: "user" | "assistant" | "system";
   content: string;
   timestamp: Date;
+  isStreaming?: boolean;
 }
 
-export function ChatMessage({ role, content, timestamp }: ChatMessageProps) {
+export function ChatMessage({ role, content, timestamp, isStreaming = false }: ChatMessageProps) {
   const isUser = role === "user";
   const isSystem = role === "system";
 
@@ -42,6 +43,16 @@ export function ChatMessage({ role, content, timestamp }: ChatMessageProps) {
                 : "prose-neutral dark:prose-invert prose-p:leading-relaxed"
             )}
           >
+            {isStreaming && !isUser && !content.trim() ? (
+              <div className="inline-flex items-center gap-2 text-sm text-muted-foreground">
+                <span>Thinking</span>
+                <span className="flex items-center gap-1">
+                  <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-primary [animation-delay:-0.2s]" />
+                  <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-primary [animation-delay:-0.1s]" />
+                  <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-primary" />
+                </span>
+              </div>
+            ) : null}
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
               components={{
@@ -91,6 +102,9 @@ export function ChatMessage({ role, content, timestamp }: ChatMessageProps) {
             >
               {content}
             </ReactMarkdown>
+            {isStreaming && !isUser ? (
+              <span className="ml-1 inline-block h-4 w-0.5 animate-pulse rounded bg-primary align-middle" />
+            ) : null}
           </div>
         </div>
 

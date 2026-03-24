@@ -6,17 +6,41 @@
  */
 
 import { prisma } from "@/lib/prisma";
-import { createChatCompletion, ChatMessage } from "@/lib/openrouter";
+import {
+  ChatMessage,
+  ChatCompletionStreamChunk,
+  createChatCompletion,
+  createChatCompletionStream,
+} from "@/lib/openrouter";
 import { buildDeviceContext, calculateDeviceStats } from "@/lib/chat-context";
 import { JALRAKSHAK_SYSTEM_PROMPT } from "@/lib/chat-prompts";
+import { DEFAULT_CHAT_MODEL, isAllowedChatModel } from "@/lib/chat-models";
 import { NextRequest, NextResponse } from "next/server";
 
 export const maxDuration = 60; // Allow up to 60 seconds for AI response
 
+interface ConversationHistoryItem {
+  role?: string;
+  content?: string;
+}
+
+interface ChatRequestBody {
+  deviceId?: string;
+  message?: string;
+  model?: string;
+  stream?: boolean;
+  conversationHistory?: ConversationHistoryItem[];
+}
+
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const { deviceId, message, conversationHistory } = body;
+    const body = (await req.json()) as ChatRequestBody;
+    const { deviceId, message, model, stream, conversationHistory } = body;
+    const requestedModel =
+      typeof model === "string" && isAllowedChatModel(model)
+        ? model
+        : DEFAULT_CHAT_MODEL;
+    const shouldStream = stream === true;
 
     // Validate input
     if (!deviceId || !message) {
@@ -61,8 +85,13 @@ export async function POST(req: NextRequest) {
     if (conversationHistory && Array.isArray(conversationHistory)) {
       const recentHistory = conversationHistory
         .slice(-10)
-        .filter((m: any) => m.role === "user" || m.role === "assistant")
-        .map((m: any) => ({
+        .filter(
+          (m): m is { role: "user" | "assistant"; content: string } =>
+            (m.role === "user" || m.role === "assistant") &&
+            typeof m.content === "string" &&
+            m.content.trim().length > 0
+        )
+        .map((m) => ({
           role: m.role,
           content: m.content,
         }));
@@ -71,15 +100,6 @@ export async function POST(req: NextRequest) {
 
     // Add current user message
     messages.push({ role: "user", content: message });
-
-    // Call OpenRouter API
-    const completion = await createChatCompletion(messages);
-    const assistantMessage = completion.choices[0]?.message?.content;
-
-    if (!assistantMessage) {
-      throw new Error("No response from AI");
-    }
-
     const userMessageId = crypto.randomUUID();
     const assistantMessageId = crypto.randomUUID();
 
@@ -90,9 +110,122 @@ export async function POST(req: NextRequest) {
         deviceId,
         role: "user",
         content: message,
-        model: completion.model,
+        model: requestedModel,
       },
     });
+
+    if (shouldStream) {
+      const encoder = new TextEncoder();
+      const streamResponse = await createChatCompletionStream(messages, requestedModel);
+      const resolvedModel = streamResponse.model;
+
+      const readable = new ReadableStream<Uint8Array>({
+        async start(controller) {
+          const sendEvent = (event: Record<string, unknown>) => {
+            controller.enqueue(
+              encoder.encode(`data: ${JSON.stringify(event)}\n\n`)
+            );
+          };
+
+          try {
+            sendEvent({
+              model: resolvedModel,
+              userMessageId,
+            });
+
+            const reader = streamResponse.response.body?.getReader();
+            if (!reader) {
+              throw new Error("No stream body from AI provider");
+            }
+
+            const decoder = new TextDecoder();
+            let buffer = "";
+            let assistantMessage = "";
+
+            const processPayload = (payload: string) => {
+              if (!payload || payload === "[DONE]") {
+                return;
+              }
+
+              const parsed = JSON.parse(payload) as ChatCompletionStreamChunk;
+              const delta = parsed.choices?.[0]?.delta?.content ?? "";
+              if (!delta) {
+                return;
+              }
+
+              assistantMessage += delta;
+              sendEvent({ delta, model: resolvedModel });
+            };
+
+            while (true) {
+              const { value, done } = await reader.read();
+              if (done) break;
+
+              buffer += decoder.decode(value, { stream: true });
+              const lines = buffer.split("\n");
+              buffer = lines.pop() || "";
+
+              for (const line of lines) {
+                const trimmed = line.trim();
+                if (!trimmed.startsWith("data:")) continue;
+                const payload = trimmed.slice(5).trim();
+                processPayload(payload);
+              }
+            }
+
+            if (buffer.trim().startsWith("data:")) {
+              processPayload(buffer.trim().slice(5).trim());
+            }
+
+            if (!assistantMessage.trim()) {
+              throw new Error("No response from AI");
+            }
+
+            await prisma.chatMessage.create({
+              data: {
+                messageId: assistantMessageId,
+                deviceId,
+                role: "assistant",
+                content: assistantMessage,
+                model: resolvedModel,
+              },
+            });
+
+            sendEvent({
+              done: true,
+              model: resolvedModel,
+              assistantMessageId,
+              userMessageId,
+            });
+            controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+            controller.close();
+          } catch (streamError: unknown) {
+            const streamMessage =
+              streamError instanceof Error
+                ? streamError.message
+                : "Failed to stream AI response";
+            sendEvent({ error: streamMessage, model: resolvedModel, userMessageId });
+            controller.close();
+          }
+        },
+      });
+
+      return new Response(readable, {
+        headers: {
+          "Content-Type": "text/event-stream; charset=utf-8",
+          "Cache-Control": "no-cache, no-transform",
+          Connection: "keep-alive",
+        },
+      });
+    }
+
+    // Non-streaming fallback response
+    const completion = await createChatCompletion(messages, requestedModel);
+    const assistantMessage = completion.choices[0]?.message?.content;
+
+    if (!assistantMessage) {
+      throw new Error("No response from AI");
+    }
 
     // Save assistant response to database
     await prisma.chatMessage.create({
@@ -113,11 +246,12 @@ export async function POST(req: NextRequest) {
       userMessageId,
       assistantMessageId,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error in chat completion:", error);
+    const errorMessage = error instanceof Error ? error.message : "Failed to generate response";
     
     // Provide helpful error messages
-    if (error.message?.includes("OPENROUTER_API_KEY")) {
+    if (errorMessage.includes("OPENROUTER_API_KEY")) {
       return NextResponse.json(
         { error: "OpenRouter API key not configured. Please add OPENROUTER_API_KEY to your environment variables." },
         { status: 500 }
@@ -125,7 +259,7 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json(
-      { error: error.message || "Failed to generate response" },
+      { error: errorMessage },
       { status: 500 }
     );
   }
