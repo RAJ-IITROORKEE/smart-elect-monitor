@@ -17,12 +17,11 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "JalRakshak.AI — IoT Water Quality Monitor",
+  title: "VoltEdge — Smart Electricity Monitoring",
   description:
-    "Real-time water quality monitoring powered by LoRaWAN IoT sensors and AI. " +
-    "Protecting India's water resources — Microsoft AI Unlock Hackathon, AI for India Track.",
-  keywords: ["water quality", "IoT", "LoRaWAN", "AI", "JalRakshak", "India", "hackathon"],
-  authors: [{ name: "DualCode Team" }],
+    "IoT-based electricity monitoring for hostels, institutions, and hotels with real-time visibility and automation-ready controls.",
+  keywords: ["electricity monitoring", "IoT", "ESP32", "energy automation", "dashboard"],
+  authors: [{ name: "VoltEdge Team" }],
 };
 
 export default function RootLayout({

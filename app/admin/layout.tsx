@@ -4,8 +4,8 @@ import { AppSidebar } from "@/components/admin/app-sidebar";
 import { SiteHeader } from "@/components/admin/site-header";
 
 export const metadata: Metadata = {
-  title: "Admin — JalRakshak AI",
-  description: "Device management panel for JalRakshak AI water quality monitoring.",
+  title: "Admin — VoltEdge",
+  description: "Frontend admin structure for Smart Electricity Monitor.",
 };
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -13,7 +13,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     <SidebarProvider>
       <AppSidebar />
       <SidebarInset>
-        <SiteHeader title="JalRakshak AI — Admin" />
+        <SiteHeader title="VoltEdge — Admin" />
         <main className="flex flex-1 flex-col gap-4 p-4 md:p-6">{children}</main>
       </SidebarInset>
     </SidebarProvider>

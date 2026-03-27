@@ -13,21 +13,22 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
+import { BrandLogo } from "@/components/brand-logo";
 import { cn } from "@/lib/utils";
 import {
   ArrowLeft,
   Bell,
-  Droplets,
+  Bolt,
+  BookOpen,
   LayoutDashboard,
   LogOut,
   MailQuestion,
   Radio,
+  Settings,
   Server,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useRouter } from "next/navigation";
-import { toast } from "sonner";
 
 const navItems = [
   {
@@ -36,12 +37,12 @@ const navItems = [
     icon: LayoutDashboard,
   },
   {
-    title: "Devices",
+    title: "Energy Nodes",
     href: "/admin/dashboard",
     icon: Server,
   },
   {
-    title: "Live Data",
+    title: "Live Analysis",
     href: "/admin/live-data",
     icon: Radio,
   },
@@ -55,46 +56,36 @@ const navItems = [
     href: "/admin/notifications",
     icon: Bell,
   },
+  {
+    title: "Docs",
+    href: "/docs",
+    icon: BookOpen,
+  },
+  {
+    title: "Settings",
+    href: "/admin/dashboard",
+    icon: Settings,
+  },
 ];
 
 export function AppSidebar() {
   const pathname = usePathname();
-  const router = useRouter();
-
-  const handleLogout = async () => {
-    try {
-      const res = await fetch("/api/admin/logout", { method: "POST" });
-      const data = await res.json();
-      if (!res.ok || data.status !== "ok") {
-        throw new Error(data.message || "Logout failed");
-      }
-
-      toast.success("Logged out successfully");
-      router.push("/admin/login");
-      router.refresh();
-    } catch (error) {
-      console.error(error);
-      toast.error("Failed to logout");
-    }
-  };
 
   return (
     <Sidebar variant="inset">
       <SidebarHeader>
         <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton size="lg" asChild className="hover:bg-sidebar-accent/60 transition-colors">
-              <Link href="/admin/dashboard">
-                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-cyan-500 text-white shadow-sm shadow-cyan-500/30">
-                  <Droplets className="size-4" />
-                </div>
-                <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-semibold">JalRakshak AI</span>
-                  <span className="truncate text-xs text-sidebar-foreground/50">Admin Panel</span>
-                </div>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton size="lg" asChild className="hover:bg-sidebar-accent/60 transition-colors">
+                <Link href="/admin/dashboard">
+                  <BrandLogo
+                    className="gap-2"
+                    iconClassName="size-8 rounded-lg shadow-sm shadow-primary/25"
+                    textClassName="truncate text-sm font-semibold"
+                  />
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
 
@@ -116,28 +107,28 @@ export function AppSidebar() {
                         "group relative h-9 gap-3 rounded-lg px-3 text-sm font-medium transition-all duration-150",
                         // Hover state
                         "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                        // Active state — cyan accent left bar + tinted bg
+                        // Active state
                         isActive
-                          ? "bg-cyan-500/10 text-cyan-500 dark:bg-cyan-400/10 dark:text-cyan-400 hover:bg-cyan-500/15 hover:text-cyan-500 dark:hover:bg-cyan-400/15 dark:hover:text-cyan-400"
+                          ? "bg-primary/10 text-primary dark:bg-primary/15 dark:text-primary hover:bg-primary/15 hover:text-primary"
                           : "text-sidebar-foreground/70"
                       )}
                     >
                       <Link href={item.href} className="flex items-center gap-3 w-full">
                         {/* Active left bar indicator */}
-                        <span
-                          className={cn(
-                            "absolute left-0 top-1/2 -translate-y-1/2 w-0.5 rounded-r-full bg-cyan-500 dark:bg-cyan-400 transition-all duration-200",
-                            isActive ? "h-5 opacity-100" : "h-0 opacity-0"
-                          )}
-                        />
+                          <span
+                            className={cn(
+                              "absolute left-0 top-1/2 -translate-y-1/2 w-0.5 rounded-r-full bg-primary transition-all duration-200",
+                              isActive ? "h-5 opacity-100" : "h-0 opacity-0"
+                            )}
+                          />
                         <item.icon
-                          className={cn(
-                            "size-4 shrink-0 transition-colors duration-150",
-                            isActive
-                              ? "text-cyan-500 dark:text-cyan-400"
-                              : "text-sidebar-foreground/50 group-hover:text-sidebar-foreground"
-                          )}
-                        />
+                            className={cn(
+                              "size-4 shrink-0 transition-colors duration-150",
+                              isActive
+                                ? "text-primary"
+                                : "text-sidebar-foreground/50 group-hover:text-sidebar-foreground"
+                            )}
+                          />
                         <span>{item.title}</span>
                       </Link>
                     </SidebarMenuButton>
@@ -159,7 +150,7 @@ export function AppSidebar() {
               >
                 <Link href="/" className="flex items-center gap-3">
                   <ArrowLeft className="size-4 shrink-0" />
-                  <span>Back to App</span>
+                  <span>Back to Website</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -168,12 +159,16 @@ export function AppSidebar() {
           <Button
             type="button"
             variant="ghost"
-            onClick={handleLogout}
-            className="h-9 w-full justify-start gap-3 rounded-lg px-3 text-sm font-medium text-destructive hover:bg-destructive/10 hover:text-destructive"
+            className="h-9 w-full justify-start gap-3 rounded-lg px-3 text-sm font-medium text-destructive/80 hover:bg-destructive/10 hover:text-destructive"
+            disabled
           >
             <LogOut className="size-4 shrink-0" />
-            Logout
+            Logout (in progress)
           </Button>
+          <p className="px-3 pb-2 text-[11px] text-sidebar-foreground/55">
+            <Bolt className="mr-1 inline-block size-3" />
+            Smart Electricity Monitor Admin
+          </p>
         </div>
       </SidebarFooter>
     </Sidebar>

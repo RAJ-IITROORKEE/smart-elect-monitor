@@ -1,275 +1,88 @@
-"use client";
-
-import { useEffect, useState, useCallback, useRef } from "react";
-import { DeviceReading, WaterPrediction, SensorReading } from "@/types";
-import { DeviceCard } from "@/components/device-card";
 import { HeroSection } from "@/components/hero-section";
-import { StatsBar } from "@/components/stats-bar";
-import { ModelSimulator } from "@/components/model-simulator";
-import { AiChatButton } from "@/components/ai-chat-button";
+import { Activity, Bolt, Building2, Cpu, IndianRupee, Wifi } from "lucide-react";
 
-import { Wifi, WifiOff, RefreshCw, FlaskConical, X } from "lucide-react";
-import { cn } from "@/lib/utils";
+const metricCards = [
+  { title: "Active Blocks", value: "18", subtitle: "Across all monitored facilities", icon: Building2 },
+  { title: "Current Demand", value: "312 kW", subtitle: "Live aggregate hostel + institution load", icon: Bolt },
+  { title: "Estimated Daily Cost", value: "Rs 34,600", subtitle: "Projected from current usage curve", icon: IndianRupee },
+  { title: "Automation Rules", value: "27", subtitle: "Schedules, threshold trips, and override flows", icon: Cpu },
+];
 
-const POLL_INTERVAL_MS = 30_000; // 30s — keeps stats fresh
-const STALE_THRESHOLD_MS = 2 * 60 * 1000; // 2 minutes
-
-/** Feed the latest reading for each device through the prediction API */
-async function buildDeviceCards(
-  latestPerDevice: Map<string, SensorReading>
-): Promise<DeviceReading[]> {
-  const results: DeviceReading[] = [];
-
-  for (const [, reading] of latestPerDevice) {
-    const { ph, tds, turbidity, conductivity } = reading;
-
-    // All four params must be present (0 is valid, null/undefined is not)
-    const canPredict =
-      ph != null && tds != null && turbidity != null && conductivity != null;
-
-    if (!canPredict) {
-      results.push({ ...reading });
-      continue;
-    }
-
-    try {
-      const res = await fetch("/api/predict", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ph: Number(ph),
-          tds: Number(tds),
-          conductivity: Number(conductivity),
-          turbidity: Number(turbidity),
-        }),
-      });
-      const prediction: WaterPrediction = res.ok ? await res.json() : undefined;
-      results.push({ ...reading, prediction });
-    } catch {
-      results.push({ ...reading });
-    }
-  }
-
-  return results;
-}
+const loadTrend = [42, 58, 67, 61, 74, 81, 76, 69, 73, 78, 66, 55];
 
 export default function DashboardPage() {
-  const [devices, setDevices] = useState<DeviceReading[]>([]);
-  // deviceId → reading history from MongoDB
-  const [deviceHistories, setDeviceHistories] = useState<Map<string, SensorReading[]>>(
-    new Map()
-  );
-  const [loading, setLoading] = useState(true);
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-  const [totalDbReadings, setTotalDbReadings] = useState<number>(0);
-  const [online, setOnline] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [simOpen, setSimOpen] = useState(false);
-  const [now, setNow] = useState(() => Date.now());
-  const mountedRef = useRef(true);
-
-  // Tick every 15s to re-evaluate staleness badges without a full fetch
-  useEffect(() => {
-    const ticker = setInterval(() => setNow(Date.now()), 15_000);
-    return () => clearInterval(ticker);
-  }, []);
-
-  const fetchData = useCallback(async (showRefreshing = false) => {
-    if (showRefreshing) setRefreshing(true);
-    try {
-      const res = await fetch("/api/sensor-data");
-      if (!res.ok) throw new Error("fetch failed");
-      const json = await res.json();
-      const readings: SensorReading[] = json.data ?? [];
-
-      // ── Total readings count from DB (or relay count as fallback) ────────
-      if (typeof json.totalReadings === "number") {
-        setTotalDbReadings(json.totalReadings);
-      }
-
-      // ── Last data point timestamp (from newest reading, not fetch time) ──
-      const dataTimestamp = json.lastDataAt
-        ? new Date(json.lastDataAt)
-        : readings[0]?.receivedAt
-        ? new Date(readings[0].receivedAt)
-        : new Date();
-
-      // ── Build latest-per-device map (API already returns one per device) ─
-      const latestPerDevice = new Map<string, SensorReading>();
-      for (const r of readings) {
-        if (!latestPerDevice.has(r.deviceId)) {
-          latestPerDevice.set(r.deviceId, r);
-        }
-      }
-
-      // ── Per-device history comes from MongoDB via API ────────────────────
-      const historyMap = new Map<string, SensorReading[]>();
-      if (json.histories && typeof json.histories === "object") {
-        for (const [deviceId, history] of Object.entries(json.histories)) {
-          historyMap.set(deviceId, history as SensorReading[]);
-        }
-      }
-
-      // ── Run AI predictions for each device ──────────────────────────────
-      const enriched = await buildDeviceCards(latestPerDevice);
-
-      if (!mountedRef.current) return;
-      setDevices(enriched);
-      setDeviceHistories(historyMap);
-      setLastUpdated(dataTimestamp);
-      setOnline(true);
-    } catch {
-      if (!mountedRef.current) return;
-      setOnline(false);
-    } finally {
-      if (!mountedRef.current) return;
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    mountedRef.current = true;
-    fetchData();
-    const timer = setInterval(() => fetchData(), POLL_INTERVAL_MS);
-    return () => {
-      mountedRef.current = false;
-      clearInterval(timer);
-    };
-  }, [fetchData]);
-
-  const safeCount = devices.filter((d) => d.prediction?.water_status === "Safe").length;
-  const unsafeCount = devices.filter((d) => d.prediction?.water_status === "Unsafe").length;
-
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       <HeroSection />
 
-      {/* Status bar */}
-      <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <span className="relative flex h-2.5 w-2.5">
-            <span
-              className={cn(
-                "absolute inline-flex h-full w-full rounded-full opacity-75",
-                online ? "animate-ping-slow bg-emerald-400" : "bg-zinc-500"
-              )}
-            />
-            <span
-              className={cn(
-                "relative inline-flex h-2.5 w-2.5 rounded-full",
-                online ? "bg-emerald-500" : "bg-zinc-500"
-              )}
-            />
-          </span>
-          {online ? (
-            <span className="flex items-center gap-1.5 text-xs font-medium text-emerald-500">
-              <Wifi className="h-3.5 w-3.5" />
-              Live · Auto-refreshes every 30s
-            </span>
-          ) : (
-            <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-              <WifiOff className="h-3.5 w-3.5" />
-              Offline — showing cached data
-            </span>
-          )}
+      <section className="mt-6 rounded-xl border border-border/60 bg-card/60 p-4 animate-fade-up stagger-1">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="inline-flex items-center gap-2 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+            <span className="inline-block h-2 w-2 animate-ping-slow rounded-full bg-emerald-500" />
+            <Wifi className="h-3.5 w-3.5" />
+            Live frontend preview mode enabled
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Layout-only dashboard for Smart Electricity Monitor (backend integrations will be added later)
+          </p>
         </div>
+      </section>
 
-        <div className="flex items-center gap-3">
-          {lastUpdated && (
-            <span className="text-xs text-muted-foreground">
-              Last data {lastUpdated.toLocaleTimeString()}
-            </span>
-          )}
-          <button
-            onClick={() => fetchData(true)}
-            disabled={refreshing}
-            className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-50"
+      <section className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        {metricCards.map(({ title, value, subtitle, icon: Icon }, idx) => (
+          <article
+            key={title}
+            className={`rounded-xl border border-border/60 bg-card p-4 shadow-sm animate-fade-up ${
+              idx === 0 ? "stagger-1" : idx === 1 ? "stagger-2" : idx === 2 ? "stagger-3" : "stagger-4"
+            }`}
           >
-            <RefreshCw className={cn("h-3.5 w-3.5", refreshing && "animate-spin")} />
-            Refresh
-          </button>
-          <button
-            onClick={() => setSimOpen((v) => !v)}
-            className={cn(
-              "flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors",
-              simOpen
-                ? "border-primary/50 bg-primary/10 text-primary"
-                : "border-border bg-background text-muted-foreground hover:bg-accent hover:text-foreground"
-            )}
-          >
-            <FlaskConical className="h-3.5 w-3.5" />
-            Model Simulator
-            {simOpen && <X className="h-3 w-3 ml-0.5 opacity-60" />}
-          </button>
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+              <span className="rounded-md bg-primary/10 p-2">
+                <Icon className="h-4 w-4 text-primary" />
+              </span>
+            </div>
+            <p className="mt-3 text-2xl font-bold tracking-tight">{value}</p>
+            <p className="mt-1 text-xs text-muted-foreground">{subtitle}</p>
+          </article>
+        ))}
+      </section>
 
-          <AiChatButton href="/device" label="AI Chat" />
-        </div>
-      </div>
-
-      {/* Model Simulator panel — full width below status bar */}
-      <ModelSimulator open={simOpen} onClose={() => setSimOpen(false)} />
-
-      {/* Stats */}
-      <StatsBar
-        total={devices.length}
-        safe={safeCount}
-        unsafe={unsafeCount}
-        readings={totalDbReadings}
-        className="mt-4"
-      />
-
-      {/* Device Cards */}
-      <section className="mt-8">
-        <h2 className="mb-4 text-xl font-semibold text-foreground">
-          Active Monitoring Nodes
-          {devices.length > 0 && (
-            <span className="ml-2 text-sm font-normal text-muted-foreground">
-              ({devices.length} device{devices.length !== 1 ? "s" : ""})
-            </span>
-          )}
-        </h2>
-
-        {loading ? (
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {[1, 2].map((i) => (
-              <div
-                key={i}
-                className="h-96 animate-pulse rounded-xl border border-border bg-card"
-              />
+      <section className="mt-6 grid gap-4 lg:grid-cols-[1.4fr_1fr]">
+        <article className="rounded-xl border border-border/60 bg-card p-5 animate-fade-up stagger-2">
+          <div className="mb-5 flex items-center justify-between">
+            <h3 className="text-base font-semibold">Realtime Analysis</h3>
+            <span className="text-xs text-muted-foreground">Last 30 mins simulated load profile</span>
+          </div>
+          <div className="flex h-52 items-end gap-2 rounded-lg border border-border/50 bg-gradient-to-b from-primary/5 to-transparent p-4">
+            {loadTrend.map((value, idx) => (
+              <div key={idx} className="flex-1">
+                <div
+                  className="w-full rounded-t-md bg-primary/70 transition-all hover:bg-primary"
+                  style={{ height: `${value * 1.5}px` }}
+                />
+              </div>
             ))}
           </div>
-        ) : devices.length === 0 ? (
-          <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border py-20 text-center">
-            <WifiOff className="mb-4 h-10 w-10 text-muted-foreground/40" />
-            <p className="text-base font-medium text-muted-foreground">
-              No devices detected yet
-            </p>
-            <p className="mt-1 text-sm text-muted-foreground/70">
-              Waiting for TTN uplink data from LoRaWAN nodes
-            </p>
+        </article>
+
+        <article className="rounded-xl border border-border/60 bg-card p-5 animate-fade-up stagger-3">
+          <h3 className="text-base font-semibold">Realtime Alerts</h3>
+          <div className="mt-4 space-y-3">
+            {[
+              "Hostel Block C exceeded configured peak threshold",
+              "Institution Lab Floor-2 running after auto-shutdown window",
+              "Hotel HVAC circuit under optimization recommendation",
+            ].map((item) => (
+              <div key={item} className="rounded-lg border border-border/60 bg-muted/30 p-3 text-sm text-muted-foreground">
+                <p className="inline-flex items-start gap-2">
+                  <Activity className="mt-0.5 h-4 w-4 text-primary" />
+                  {item}
+                </p>
+              </div>
+            ))}
           </div>
-        ) : (
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {devices.map((device) => {
-              const readingAge = device.receivedAt
-                ? now - new Date(device.receivedAt).getTime()
-                : device.timestamp
-                ? now - new Date(device.timestamp).getTime()
-                : 0;
-              const isOffline = readingAge > STALE_THRESHOLD_MS;
-              return (
-                <div key={device.deviceId} className={cn(isOffline && "opacity-75")}>
-                  <DeviceCard
-                    device={device}
-                    history={deviceHistories.get(device.deviceId) ?? []}
-                    isOffline={isOffline}
-                  />
-                </div>
-              );
-            })}
-          </div>
-        )}
+        </article>
       </section>
     </div>
   );

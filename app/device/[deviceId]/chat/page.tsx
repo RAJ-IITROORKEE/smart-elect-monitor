@@ -1,43 +1,32 @@
-import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
-import { ChatInterface } from "@/components/chat/chat-interface";
 
-interface ChatPageProps {
-  params: Promise<{
-    deviceId: string;
-  }>;
-}
+type ChatPageProps = {
+  params: Promise<{ deviceId: string }>;
+};
 
-export default async function ChatPage({ params }: ChatPageProps) {
+export default async function DeviceChatPage({ params }: ChatPageProps) {
   const { deviceId } = await params;
 
-  // Fetch device to verify it exists
-  const device = await prisma.device.findUnique({
-    where: { deviceId },
-  });
-
-  if (!device) {
+  if (!deviceId) {
     notFound();
   }
 
   return (
-    <div className="h-screen">
-      <ChatInterface deviceId={deviceId} device={device} />
+    <div className="mx-auto flex h-screen max-w-6xl items-center justify-center px-4">
+      <div className="w-full rounded-xl border border-border/60 bg-card p-6 text-center">
+        <h1 className="text-xl font-semibold">Device Chat Placeholder</h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          AI chat for <span className="font-mono text-foreground">{deviceId}</span> is currently in progress.
+        </p>
+      </div>
     </div>
   );
 }
 
 export async function generateMetadata({ params }: ChatPageProps) {
   const { deviceId } = await params;
-  
-  const device = await prisma.device.findUnique({
-    where: { deviceId },
-  });
-
   return {
-    title: `Chat - ${device?.deviceName || deviceId} | JalRakshak AI`,
-    description: `AI-powered chat for water quality analysis of ${
-      device?.deviceName || deviceId
-    }`,
+    title: `Chat - ${deviceId} | VoltEdge`,
+    description: `Device chat workspace for ${deviceId} (frontend placeholder).`,
   };
 }

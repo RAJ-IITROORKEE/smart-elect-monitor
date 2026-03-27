@@ -3,8 +3,9 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { BrandLogo } from "@/components/brand-logo";
 import { cn } from "@/lib/utils";
-import { Droplets, Menu, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { useState } from "react";
 
 const navLinks = [
@@ -25,12 +26,7 @@ export function Navbar() {
           href="/"
           className="flex items-center gap-2.5 font-bold text-foreground transition-opacity hover:opacity-80"
         >
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 ring-1 ring-primary/30">
-            <Droplets className="h-4.5 w-4.5 text-primary" />
-          </span>
-          <span className="gradient-text text-lg font-extrabold tracking-tight">
-            JalRakshak<span className="text-primary">.AI</span>
-          </span>
+          <BrandLogo textClassName="gradient-text" />
         </Link>
 
         {/* ── Desktop Nav ── */}
@@ -50,6 +46,12 @@ export function Navbar() {
             </Link>
           ))}
           <div className="ml-2 h-5 w-px bg-border" />
+          <Link
+            href="/admin"
+            className="rounded-lg border border-primary/30 px-3 py-1.5 text-xs font-semibold text-primary transition-colors hover:bg-primary/10"
+          >
+            Admin
+          </Link>
           <ThemeToggle />
         </nav>
 
@@ -68,7 +70,7 @@ export function Navbar() {
 
       {/* ── Mobile Menu ── */}
       {mobileOpen && (
-        <div className="border-t border-border/50 bg-background/95 px-4 pb-4 md:hidden">
+        <div className="border-t border-border/50 bg-background/95 px-4 pb-4 md:hidden animate-fade-up">
           <nav className="mt-2 flex flex-col gap-1">
             {navLinks.map((link) => (
               <Link
@@ -85,6 +87,13 @@ export function Navbar() {
                 {link.label}
               </Link>
             ))}
+            <Link
+              href="/admin"
+              onClick={() => setMobileOpen(false)}
+              className="mt-1 rounded-lg border border-primary/30 px-4 py-2.5 text-sm font-semibold text-primary transition-colors hover:bg-primary/10"
+            >
+              Admin Panel
+            </Link>
           </nav>
         </div>
       )}
