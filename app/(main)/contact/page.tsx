@@ -26,7 +26,7 @@ export default function ContactPage() {
             <CardTitle>Send a Message</CardTitle>
           </CardHeader>
           <CardContent>
-            <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
+            <form className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Name</Label>
                 <Input id="name" name="name" placeholder="Enter your name" />
@@ -39,7 +39,7 @@ export default function ContactPage() {
                 <Label htmlFor="message">Message</Label>
                 <Textarea id="message" name="message" placeholder="Type your message" className="min-h-28" />
               </div>
-              <Button type="submit" className="w-full sm:w-auto" disabled>
+              <Button type="button" className="w-full sm:w-auto" disabled>
                 Send Message (in progress)
               </Button>
             </form>
