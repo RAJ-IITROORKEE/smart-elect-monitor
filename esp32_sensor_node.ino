@@ -201,8 +201,12 @@ void updateDisplay() {
   display.println("%");
 
   display.setCursor(0, 39);
-  display.print("Occupied: ");
-  display.println(occupied ? "YES" : "NO");
+  if (pirEnabled) {
+    display.print("Occupied: ");
+    display.println(occupied ? "YES" : "NO");
+  } else {
+    display.println("Occupied: OFF");
+  }
 
   display.setCursor(0, 51);
   display.print("PIR:");

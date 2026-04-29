@@ -196,7 +196,9 @@ export function LiveMonitor({ deviceId = 'node_01' }: LiveMonitorProps) {
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base">Device Controls</CardTitle>
-          <CardDescription>Control PIR sensor and LED remotely</CardDescription>
+          <CardDescription>
+            Control PIR sensor and LED remotely • Current Status: PIR {pirEnabled ? 'ON' : 'OFF'} | LED {ledEnabled ? 'ON' : 'OFF'}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap gap-3">
@@ -205,9 +207,14 @@ export function LiveMonitor({ deviceId = 'node_01' }: LiveMonitorProps) {
               size="default"
               onClick={togglePIR}
               disabled={isUpdatingControl}
-              className="flex-1 min-w-[200px]"
+              className={`flex-1 min-w-[200px] ${pirEnabled ? 'bg-green-600 hover:bg-green-700' : ''}`}
             >
-              {pirEnabled ? (
+              {isUpdatingControl ? (
+                <>
+                  <RefreshCw className="h-5 w-5 mr-2 animate-spin" />
+                  Updating...
+                </>
+              ) : pirEnabled ? (
                 <>
                   <Eye className="h-5 w-5 mr-2" />
                   PIR Sensor: ON
@@ -224,20 +231,37 @@ export function LiveMonitor({ deviceId = 'node_01' }: LiveMonitorProps) {
               size="default"
               onClick={toggleLED}
               disabled={isUpdatingControl}
-              className={`flex-1 min-w-[200px] ${ledEnabled ? 'bg-yellow-500 hover:bg-yellow-600' : ''}`}
+              className={`flex-1 min-w-[200px] ${ledEnabled ? 'bg-yellow-500 hover:bg-yellow-600 text-black' : ''}`}
             >
-              {ledEnabled ? (
+              {isUpdatingControl ? (
+                <>
+                  <RefreshCw className="h-5 w-5 mr-2 animate-spin" />
+                  Updating...
+                </>
+              ) : ledEnabled ? (
                 <>
                   <Lightbulb className="h-5 w-5 mr-2" />
-                  LED: ON
+                  Control LED: ON
                 </>
               ) : (
                 <>
                   <Power className="h-5 w-5 mr-2" />
-                  LED: OFF
+                  Control LED: OFF
                 </>
               )}
             </Button>
+          </div>
+          <div className="mt-3 text-xs text-muted-foreground">
+            {isUpdatingControl ? (
+              <p className="flex items-center gap-2">
+                <RefreshCw className="h-3 w-3 animate-spin" />
+                Sending command to device...
+              </p>
+            ) : (
+              <p>
+                Changes will be applied to ESP32 within 5 seconds
+              </p>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -331,13 +355,28 @@ export function LiveMonitor({ deviceId = 'node_01' }: LiveMonitorProps) {
           <CardContent>
             <div className="space-y-3">
               <div className="text-4xl font-bold tracking-tight">
-                {latestReading ? (latestReading.occupied ? 'YES' : 'NO') : 'N/A'}
+                {pirEnabled 
+                  ? (latestReading ? (latestReading.occupied ? 'YES' : 'NO') : 'N/A')
+                  : 'OFF'
+                }
               </div>
-              <Badge className={latestReading?.occupied ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
-                {latestReading?.occupied ? 'Occupied' : 'Vacant'}
+              <Badge className={
+                !pirEnabled 
+                  ? 'bg-gray-100 text-gray-800' 
+                  : latestReading?.occupied 
+                    ? 'bg-green-100 text-green-800' 
+                    : 'bg-gray-100 text-gray-800'
+              }>
+                {!pirEnabled ? 'PIR Disabled' : latestReading?.occupied ? 'Occupied' : 'Vacant'}
               </Badge>
               {stats && (
                 <div className="text-xs text-muted-foreground space-y-1 pt-2">
+                  <div className="flex justify-between">
+                    <span>PIR Status:</span>
+                    <span className={`font-mono ${pirEnabled ? 'text-green-600' : 'text-red-600'}`}>
+                      {pirEnabled ? 'ENABLED' : 'DISABLED'}
+                    </span>
+                  </div>
                   <div className="flex justify-between">
                     <span>Occupancy Rate:</span>
                     <span className="font-mono">{stats.occupancyRate.toFixed(1)}%</span>
