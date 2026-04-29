@@ -1,6 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   BadgeCheck,
   Bolt,
@@ -9,10 +10,66 @@ import {
   Database,
   Hotel,
   Network,
-  Radio,
   School,
   Users,
+  Zap,
+  Wifi,
+  Gauge,
+  Eye,
+  BellRing,
+  BarChart3,
+  Shield,
+  Award,
+  Mail,
 } from "lucide-react";
+
+const techBadges = [
+  { label: "ESP32", color: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300", icon: Cpu },
+  { label: "WiFi", color: "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300", icon: Wifi },
+  { label: "IoT", color: "bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300", icon: Network },
+  { label: "DHT22 Sensor", color: "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300", icon: Gauge },
+  { label: "Real-time Monitoring", color: "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300", icon: Eye },
+  { label: "Next.js 16", color: "bg-slate-100 text-slate-700 dark:bg-slate-900 dark:text-slate-300", icon: Zap },
+];
+
+const keyFeatures = [
+  { 
+    icon: Gauge, 
+    title: "Live Monitoring", 
+    desc: "Real-time temperature, humidity, and occupancy tracking with auto-refresh dashboard",
+    color: "text-blue-500"
+  },
+  { 
+    icon: Eye, 
+    title: "PIR Motion Detection", 
+    desc: "Automatic room occupancy detection with 20-second timeout for accurate presence tracking",
+    color: "text-green-500"
+  },
+  { 
+    icon: Zap, 
+    title: "Remote Control", 
+    desc: "Toggle LED lights and PIR sensor remotely from dashboard with instant feedback",
+    color: "text-yellow-500"
+  },
+  { 
+    icon: BellRing, 
+    title: "Smart Alerts", 
+    desc: "Get notified when lights are on in unoccupied rooms to save energy",
+    color: "text-red-500"
+  },
+  { 
+    icon: BarChart3, 
+    title: "Visual Analytics", 
+    desc: "SVG line graphs with color-coded data points and 24-hour statistics",
+    color: "text-purple-500"
+  },
+  { 
+    icon: Shield, 
+    title: "Admin Panel", 
+    desc: "Secure admin dashboard for device management, analytics, and user contacts",
+    color: "text-indigo-500"
+  },
+];
 
 const stack = [
   "Next.js 16",
@@ -22,8 +79,11 @@ const stack = [
   "MongoDB (planned)",
   "Prisma ORM (planned)",
   "ESP32",
-  "Wi-Fi communication",
-  "LoRaWAN ready",
+  "DHT22 Sensor",
+  "PIR Motion Sensor",
+  "OLED Display",
+  "Wi-Fi Communication",
+  "ArduinoJson",
 ];
 
 const sectors = [
@@ -32,12 +92,34 @@ const sectors = [
   { icon: Hotel, title: "Hotels", desc: "Improve guest comfort while reducing peak-hour operational wastage." },
 ];
 
+const supervisor = {
+  name: "Dr. Rajib Kumar Panigrahi",
+  role: "Project Supervisor & Mentor",
+  designation: "Assistant Professor",
+  department: "Electronics and Communication Engineering (ECE)",
+  institution: "Indian Institute of Technology, Roorkee",
+  color: "bg-gradient-to-br from-amber-500 to-orange-600",
+  initials: "RKP"
+};
+
 const team = [
   {
     name: "Sagar Baruah",
     role: "Core Team Member",
-    details: "Electronics and Communication, B.Tech 3rd Year, IIT Roorkee",
+    details: "B.Tech 3rd Year, Electronics and Communication Engineering",
+    institution: "IIT Roorkee",
     email: "sagar_b@ece.iitr.ac.in",
+    color: "bg-gradient-to-br from-blue-500 to-cyan-600",
+    initials: "SB"
+  },
+  {
+    name: "Chintapalli Ponting",
+    role: "Core Team Member",
+    details: "B.Tech 3rd Year, Electronics and Communication Engineering",
+    institution: "IIT Roorkee",
+    email: "Chintapalli_p@ece.iitr.ac.in",
+    color: "bg-gradient-to-br from-green-500 to-emerald-600",
+    initials: "CP"
   },
 ];
 
@@ -55,14 +137,47 @@ export default function AboutPage() {
         <p className="mx-auto mt-4 max-w-3xl text-base leading-relaxed text-muted-foreground sm:text-lg">
           VoltEdge is an IoT-based electricity monitoring system designed for efficient control
           and automation across hostels, institutions, and hotels.
-          It uses standard ESP32 development boards with Wi-Fi communication for current deployments,
-          while keeping the architecture ready for LoRaWAN-based scalability in future phases.
+          It uses ESP32 development boards with Wi-Fi communication, DHT22 sensors for climate monitoring,
+          and PIR motion detection for smart occupancy tracking with remote LED control capabilities.
         </p>
+      </div>
+
+      {/* Tech Stack Badges */}
+      <div className="mt-8 flex flex-wrap justify-center gap-3 animate-fade-up stagger-1">
+        {techBadges.map(({ label, color, icon: Icon }) => (
+          <Badge key={label} className={`${color} flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold`}>
+            <Icon className="h-3.5 w-3.5" />
+            {label}
+          </Badge>
+        ))}
       </div>
 
       <Separator className="my-10 opacity-50" />
 
-      <section className="mb-10 animate-fade-up stagger-1">
+      {/* Key Features */}
+      <section className="mb-10 animate-fade-up stagger-2">
+        <h2 className="mb-6 text-2xl font-bold flex items-center gap-2">
+          <Zap className="h-6 w-6 text-primary" />
+          Key Features
+        </h2>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {keyFeatures.map(({ icon: Icon, title, desc, color }) => (
+            <Card key={title} className="border-border/60 hover:border-primary/30 transition-all">
+              <CardContent className="p-5">
+                <div className="mb-3 inline-flex rounded-lg bg-primary/10 p-2.5">
+                  <Icon className={`h-5 w-5 ${color}`} />
+                </div>
+                <h3 className="text-sm font-semibold mb-2">{title}</h3>
+                <p className="text-xs leading-relaxed text-muted-foreground">{desc}</p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </section>
+
+      <Separator className="my-10 opacity-50" />
+
+      <section className="mb-10 animate-fade-up stagger-3">
         <h2 className="mb-4 text-2xl font-bold">Project Brief</h2>
         <div className="grid gap-4 md:grid-cols-2">
           <Card className="border-border/60">
@@ -72,8 +187,8 @@ export default function AboutPage() {
                 Hardware + Communication
               </h3>
               <p className="text-sm text-muted-foreground">
-                ESP32 nodes connect with sensors and stream power parameters over Wi-Fi for real-time
-                operational monitoring. LoRaWAN support will be included in later releases for larger campus-scale deployment.
+                ESP32 nodes with DHT22 sensors and PIR motion detectors stream climate and occupancy data over Wi-Fi 
+                for real-time operational monitoring. Remote LED control enables energy-saving automation.
               </p>
             </CardContent>
           </Card>
@@ -84,15 +199,15 @@ export default function AboutPage() {
                 Platform Vision
               </h3>
               <p className="text-sm text-muted-foreground">
-                The dashboard delivers visibility into load behavior, real-time analysis, alerts,
-                and automation-ready controls to reduce energy wastage while preserving reliability.
+                The dashboard delivers visibility into climate patterns, occupancy behavior, real-time analysis, 
+                smart alerts, and automation-ready controls to reduce energy wastage while preserving comfort.
               </p>
             </CardContent>
           </Card>
         </div>
       </section>
 
-      <section className="mb-10 animate-fade-up stagger-2">
+      <section className="mb-10 animate-fade-up stagger-4">
         <h2 className="mb-4 text-2xl font-bold">Target Environments</h2>
         <div className="grid gap-4 sm:grid-cols-3">
           {sectors.map(({ icon: Icon, title, desc }) => (
@@ -109,7 +224,7 @@ export default function AboutPage() {
         </div>
       </section>
 
-      <section className="mb-10 animate-fade-up stagger-3">
+      <section className="mb-10 animate-fade-up stagger-5">
         <h2 className="mb-4 text-2xl font-bold">Technology Stack</h2>
         <div className="flex flex-wrap gap-2">
           {stack.map((item) => (
@@ -126,28 +241,84 @@ export default function AboutPage() {
         </div>
       </section>
 
-      <section className="animate-fade-up stagger-4">
-        <h2 className="mb-4 text-2xl font-bold">Team</h2>
-        <div className="grid gap-4 md:grid-cols-1">
-          {team.map((member) => (
-            <Card key={member.name} className="border-border/60">
-              <CardContent className="p-5">
-                <div className="mb-2 inline-flex rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
-                  <Users className="mr-1.5 h-3.5 w-3.5" />
-                  {member.role}
+      <Separator className="my-10 opacity-50" />
+
+      {/* Team Section */}
+      <section className="animate-fade-up stagger-6">
+        <h2 className="mb-6 text-2xl font-bold flex items-center gap-2">
+          <Users className="h-6 w-6 text-primary" />
+          Team
+        </h2>
+
+        {/* Project Supervisor */}
+        <div className="mb-8">
+          <div className="mb-4 flex items-center gap-2">
+            <Award className="h-5 w-5 text-amber-500" />
+            <h3 className="text-lg font-semibold text-foreground">Project Supervisor & Mentor</h3>
+          </div>
+          <Card className="border-amber-500/30 bg-amber-500/5">
+            <CardContent className="p-6">
+              <div className="flex items-start gap-4">
+                <Avatar className="h-16 w-16">
+                  <AvatarFallback className={`${supervisor.color} text-white text-lg font-bold`}>
+                    {supervisor.initials}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1">
+                  <h4 className="text-lg font-bold text-foreground">{supervisor.name}</h4>
+                  <p className="text-sm font-medium text-amber-600 dark:text-amber-400 mt-1">
+                    {supervisor.designation}
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {supervisor.department}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {supervisor.institution}
+                  </p>
                 </div>
-                <h3 className="text-base font-semibold">{member.name}</h3>
-                <p className="mt-1 text-sm text-muted-foreground">{member.details}</p>
-                <p className="mt-1 text-sm text-muted-foreground">{member.email}</p>
-              </CardContent>
-            </Card>
-          ))}
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
-        <div className="mt-5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm">
+        {/* Core Team Members */}
+        <div>
+          <div className="mb-4 flex items-center gap-2">
+            <Users className="h-5 w-5 text-primary" />
+            <h3 className="text-lg font-semibold text-foreground">Core Team Members</h3>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            {team.map((member) => (
+              <Card key={member.name} className="border-border/60 hover:border-primary/30 transition-all">
+                <CardContent className="p-5">
+                  <div className="flex items-start gap-4">
+                    <Avatar className="h-14 w-14">
+                      <AvatarFallback className={`${member.color} text-white text-base font-bold`}>
+                        {member.initials}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1">
+                      <h4 className="text-base font-semibold text-foreground">{member.name}</h4>
+                      <p className="text-xs text-muted-foreground mt-1">{member.details}</p>
+                      <p className="text-xs text-muted-foreground">{member.institution}</p>
+                      <div className="mt-2 flex items-center gap-1.5 text-xs text-primary">
+                        <Mail className="h-3.5 w-3.5" />
+                        <a href={`mailto:${member.email}`} className="hover:underline">
+                          {member.email}
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-6 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm">
           <p className="inline-flex items-center gap-2 text-emerald-700 dark:text-emerald-300">
             <BadgeCheck className="h-4 w-4" />
-            Communication baseline: ESP32 + Wi-Fi | Upgrade path: LoRaWAN for optimized scalability.
+            WiFi-based IoT monitoring with ESP32 for real-time climate and occupancy tracking with remote control capabilities.
           </p>
         </div>
       </section>

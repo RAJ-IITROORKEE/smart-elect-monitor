@@ -1,11 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useSensorData, useSimulateSensorData } from '@/hooks/use-sensor-data';
+import { useSensorData } from '@/hooks/use-sensor-data';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Thermometer, Droplets, Activity, RefreshCw, Database, Play, Pause, Users, Lightbulb, Eye, EyeOff, Power } from 'lucide-react';
+import { Thermometer, Droplets, Activity, RefreshCw, Database, Users, Lightbulb, Eye, EyeOff, Power } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 
@@ -20,7 +20,6 @@ export function LiveMonitor({ deviceId = 'node_01' }: LiveMonitorProps) {
     autoStart: true,
   });
 
-  const { isSimulating, startSimulation, stopSimulation } = useSimulateSensorData(deviceId, 10000);
   const [isPulse, setIsPulse] = useState(false);
   const [pirEnabled, setPirEnabled] = useState(true);
   const [ledEnabled, setLedEnabled] = useState(false);
@@ -134,23 +133,6 @@ export function LiveMonitor({ deviceId = 'node_01' }: LiveMonitorProps) {
           >
             <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
             Refresh
-          </Button>
-          <Button
-            variant={isSimulating ? 'destructive' : 'default'}
-            size="sm"
-            onClick={isSimulating ? stopSimulation : startSimulation}
-          >
-            {isSimulating ? (
-              <>
-                <Pause className="h-4 w-4 mr-2" />
-                Stop Simulation
-              </>
-            ) : (
-              <>
-                <Play className="h-4 w-4 mr-2" />
-                Start Simulation
-              </>
-            )}
           </Button>
         </div>
       </div>
@@ -453,7 +435,7 @@ export function LiveMonitor({ deviceId = 'node_01' }: LiveMonitorProps) {
             ) : (
               <div className="h-48 flex items-center justify-center text-sm text-muted-foreground">
                 <Activity className="h-4 w-4 mr-2" />
-                No data available. Start simulation or wait for sensor data.
+                No data available. Waiting for sensor data from ESP32.
               </div>
             )}
           </CardContent>
@@ -518,7 +500,7 @@ export function LiveMonitor({ deviceId = 'node_01' }: LiveMonitorProps) {
             ) : (
               <div className="h-48 flex items-center justify-center text-sm text-muted-foreground">
                 <Activity className="h-4 w-4 mr-2" />
-                No data available. Start simulation or wait for sensor data.
+                No data available. Waiting for sensor data from ESP32.
               </div>
             )}
           </CardContent>
@@ -552,7 +534,7 @@ export function LiveMonitor({ deviceId = 'node_01' }: LiveMonitorProps) {
           ) : (
             <div className="h-24 flex items-center justify-center text-sm text-muted-foreground">
               <Activity className="h-4 w-4 mr-2" />
-              No data available. Start simulation or wait for sensor data.
+              No data available. Waiting for sensor data from ESP32.
             </div>
           )}
         </CardContent>

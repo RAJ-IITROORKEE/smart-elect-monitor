@@ -10,7 +10,7 @@ import { useState } from "react";
 
 const navLinks = [
   { href: "/about", label: "About" },
-  { href: "/docs", label: "Docs" },
+  // { href: "/docs", label: "Docs" }, // Removed - Docs section not needed
   { href: "/contact", label: "Contact" },
 ];
 

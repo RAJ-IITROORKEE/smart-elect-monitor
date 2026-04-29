@@ -1,4 +1,4 @@
-import { Bolt, Cpu, Wifi } from "lucide-react";
+import { Bolt, Cpu, Wifi, Gauge, Lightbulb, Eye } from "lucide-react";
 
 export function HeroSection() {
   return (
@@ -15,36 +15,37 @@ export function HeroSection() {
 
       <div className="relative flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
         <div className="max-w-xl">
-          {/* Hackathon badge */}
+          {/* Project badge */}
           <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary animate-pulse-border">
             <Cpu className="h-3 w-3" />
-            IoT Energy Intelligence Platform
+            WiFi-Based IoT Monitoring & Control
           </div>
 
           <h1 className="text-3xl font-extrabold leading-tight tracking-tight text-foreground sm:text-4xl">
             <span className="gradient-text">VoltEdge</span>
             <br />
             <span className="text-2xl font-semibold text-muted-foreground sm:text-3xl">
-              Monitor. Control. Save Power.
+              Real-time Climate & Occupancy Monitoring
             </span>
           </h1>
 
            <p className="mt-3 text-sm leading-relaxed text-muted-foreground sm:text-base">
-             Smart electricity monitoring for hostels, institutions, and hotels using ESP32-based nodes,
-             Wi-Fi communication today, and LoRaWAN-ready architecture for future scale.
-             Built for efficient control automation and operational visibility.
+             WiFi-based IoT dashboard for real-time tracking of temperature, humidity, and room occupancy 
+             using ESP32 sensors. Monitor climate conditions, detect presence with PIR sensors, 
+             and remotely control LED appliances—all from a centralized dashboard.
            </p>
 
           <div className="mt-4 flex flex-wrap gap-3">
             {[
-              { icon: Bolt, text: "Real-Time Power Metrics" },
-              { icon: Wifi, text: "ESP32 + Wi-Fi" },
-              { icon: Cpu, text: "Automation-Ready Insights" },
+              { icon: Gauge, text: "Live Sensor Data" },
+              { icon: Eye, text: "PIR Motion Detection" },
+              { icon: Lightbulb, text: "Remote LED Control" },
+              { icon: Wifi, text: "WiFi Communication" },
             ].map(({ icon: Icon, text }, i) => (
               <span
                 key={text}
                 className={`inline-flex items-center gap-1.5 rounded-full bg-secondary px-3 py-1 text-xs font-medium text-secondary-foreground animate-fade-up ${
-                  i === 0 ? "stagger-1" : i === 1 ? "stagger-2" : "stagger-3"
+                  i === 0 ? "stagger-1" : i === 1 ? "stagger-2" : i === 2 ? "stagger-3" : "stagger-4"
                 }`}
               >
                 <Icon className="h-3 w-3 text-primary" />
