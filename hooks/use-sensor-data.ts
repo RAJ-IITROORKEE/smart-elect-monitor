@@ -36,14 +36,45 @@ export function useSensorData(options: UseSensorDataOptions = {}): UseSensorData
   const [error, setError] = useState<string | null>(null);
 
   /**
-   * Refresh all sensor data
+   * Refresh all sensor data - fetch from API and merge with localStorage
    */
-  const refreshData = useCallback(() => {
+  const refreshData = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
 
-      // Get all devices
+      // Fetch data from API
+      try {
+        const apiUrl = deviceId 
+          ? `/api/sensor-data?device_id=${deviceId}&limit=500`
+          : '/api/sensor-data';
+        
+        const response = await fetch(apiUrl);
+        
+        if (response.ok) {
+          const apiData = await response.json();
+          
+          if (apiData.success) {
+            if (deviceId && apiData.readings) {
+              // Store fetched readings in localStorage
+              apiData.readings.forEach((reading: SensorReading) => {
+                SensorDataService.saveSensorReading(reading);
+              });
+            } else if (apiData.devices) {
+              // Store all device readings
+              Object.values(apiData.devices).forEach((device: any) => {
+                if (device.latest_reading) {
+                  SensorDataService.saveSensorReading(device.latest_reading);
+                }
+              });
+            }
+          }
+        }
+      } catch (apiError) {
+        console.warn('API fetch failed, using localStorage only:', apiError);
+      }
+
+      // Get all devices from localStorage (now includes API data)
       const allDevices = SensorDataService.getAllDevices();
       setDevices(allDevices);
 

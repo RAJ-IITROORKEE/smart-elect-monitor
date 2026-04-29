@@ -5,11 +5,13 @@ interface SensorData {
   device_id: string;
   temperature: number;
   humidity: number;
-  timestamp?: string;
+  timestamp: string;
 }
 
-// Configure API route for external requests
-export const runtime = 'edge';
+// In-memory storage for sensor data (last 500 readings per device)
+// In production, use a database like PostgreSQL, MongoDB, or Redis
+const sensorDataStore = new Map<string, SensorData[]>();
+const MAX_READINGS_PER_DEVICE = 500;
 
 // POST handler for receiving sensor data from ESP32
 export async function POST(request: NextRequest) {
@@ -47,22 +49,25 @@ export async function POST(request: NextRequest) {
       timestamp: new Date().toISOString(),
     };
 
+    // Store data in memory
+    const deviceReadings = sensorDataStore.get(body.device_id) || [];
+    deviceReadings.push(sensorData);
+    
+    // Keep only the last MAX_READINGS_PER_DEVICE readings
+    if (deviceReadings.length > MAX_READINGS_PER_DEVICE) {
+      deviceReadings.shift();
+    }
+    
+    sensorDataStore.set(body.device_id, deviceReadings);
+
     // Log received data (for development/debugging)
-    console.log('Received sensor data:', {
+    console.log('✓ Stored sensor data:', {
       device_id: sensorData.device_id,
       temperature: `${sensorData.temperature}°C`,
       humidity: `${sensorData.humidity}%`,
       timestamp: sensorData.timestamp,
+      total_readings: deviceReadings.length,
     });
-
-    // In a production environment, you would:
-    // 1. Store this data in a database (PostgreSQL, MongoDB, etc.)
-    // 2. Trigger real-time updates via WebSocket/Server-Sent Events
-    // 3. Process data for analytics and alerting
-    // 4. Cache recent data in Redis for quick access
-    
-    // For now, we're just acknowledging receipt
-    // The frontend will use localStorage to store data on the client side
 
     // Return success response
     return NextResponse.json(
@@ -75,7 +80,7 @@ export async function POST(request: NextRequest) {
         status: 200,
         headers: {
           'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'POST, OPTIONS',
+          'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
           'Access-Control-Allow-Headers': 'Content-Type',
         }
       }
@@ -93,6 +98,76 @@ export async function POST(request: NextRequest) {
   }
 }
 
+// GET handler to fetch stored sensor data
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const deviceId = searchParams.get('device_id');
+    const limit = parseInt(searchParams.get('limit') || '100');
+
+    if (deviceId) {
+      // Get data for specific device
+      const deviceReadings = sensorDataStore.get(deviceId) || [];
+      const limitedReadings = deviceReadings.slice(-limit);
+      
+      return NextResponse.json(
+        {
+          success: true,
+          device_id: deviceId,
+          count: limitedReadings.length,
+          readings: limitedReadings,
+        },
+        { 
+          status: 200,
+          headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type',
+          }
+        }
+      );
+    } else {
+      // Get all devices and their latest readings
+      const allDevices: Record<string, any> = {};
+      
+      sensorDataStore.forEach((readings, deviceId) => {
+        const latestReading = readings[readings.length - 1];
+        allDevices[deviceId] = {
+          device_id: deviceId,
+          latest_reading: latestReading,
+          total_readings: readings.length,
+        };
+      });
+
+      return NextResponse.json(
+        {
+          success: true,
+          devices: allDevices,
+          total_devices: sensorDataStore.size,
+        },
+        { 
+          status: 200,
+          headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type',
+          }
+        }
+      );
+    }
+  } catch (error) {
+    console.error('Error fetching sensor data:', error);
+    
+    return NextResponse.json(
+      { 
+        success: false, 
+        error: 'Internal server error fetching sensor data' 
+      },
+      { status: 500 }
+    );
+  }
+}
+
 // OPTIONS handler for CORS preflight requests
 export async function OPTIONS() {
   return NextResponse.json(
@@ -101,27 +176,9 @@ export async function OPTIONS() {
       status: 200,
       headers: {
         'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
         'Access-Control-Allow-Headers': 'Content-Type',
       },
     }
-  );
-}
-
-// GET handler to check API status
-export async function GET() {
-  return NextResponse.json(
-    {
-      status: 'active',
-      message: 'Sensor Data API is operational',
-      endpoint: '/api/sensor-data',
-      methods: ['POST'],
-      expectedPayload: {
-        device_id: 'string',
-        temperature: 'number',
-        humidity: 'number',
-      },
-    },
-    { status: 200 }
   );
 }
