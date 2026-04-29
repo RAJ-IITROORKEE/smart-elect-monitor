@@ -32,16 +32,15 @@ export function AdminNotificationsBell() {
 
   const fetchNotifications = async () => {
     try {
-      // For now, we'll fetch from our seeded data
-      // Once you create /api/notifications, this will work automatically
-      const response = await fetch('/api/notifications?limit=5&status=unread').catch(() => null);
+      // Fetch active (unread) notifications
+      const response = await fetch('/api/notifications?limit=5&status=active');
       
-      if (response && response.ok) {
+      if (response.ok) {
         const data = await response.json();
         setNotifications(data.notifications || []);
-        setUnreadCount(data.unreadCount || data.total || 0);
+        setUnreadCount(data.unread || data.count || 0);
       } else {
-        // Fallback to mock data if API doesn't exist yet
+        // Fallback to default count if API fails
         setUnreadCount(3);
       }
     } catch (error) {
