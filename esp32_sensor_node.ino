@@ -17,8 +17,8 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 DHT dht22(DHT22_PIN, DHT22);
 
 // ---------------- PIR + LED ----------------
-const uint8_t controlLED = 4;      // LED controlled from dashboard (GPIO 4)
-const uint8_t statusLED = 2;       // Status LED for motion detection
+const uint8_t controlLED = 2;      // LED controlled from dashboard (GPIO 2)
+const uint8_t statusLED = 4;       // Status LED for motion detection (GPIO 4)
 const uint8_t motionSensor = 23;   // PIR sensor
 
 unsigned long now;

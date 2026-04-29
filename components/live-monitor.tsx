@@ -363,24 +363,53 @@ export function LiveMonitor({ deviceId = 'node_01' }: LiveMonitorProps) {
           </CardHeader>
           <CardContent>
             {last100Readings.length > 0 ? (
-              <div className="h-48 flex items-end gap-[2px]">
-                {last100Readings.map((reading, idx) => {
-                  const heightPercent = ((reading.temperature - 10) / 30) * 100;
-                  const temp = reading.temperature;
-                  const color = temp > 30 ? 'bg-red-500' : temp > 25 ? 'bg-orange-500' : 'bg-green-500';
+              <div className="h-48 w-full relative">
+                <svg className="w-full h-full" viewBox="0 0 400 180" preserveAspectRatio="none">
+                  {/* Grid lines */}
+                  <line x1="0" y1="45" x2="400" y2="45" stroke="currentColor" strokeOpacity="0.1" strokeWidth="1" />
+                  <line x1="0" y1="90" x2="400" y2="90" stroke="currentColor" strokeOpacity="0.1" strokeWidth="1" />
+                  <line x1="0" y1="135" x2="400" y2="135" stroke="currentColor" strokeOpacity="0.1" strokeWidth="1" />
                   
-                  return (
-                    <div
-                      key={idx}
-                      className={`flex-1 ${color} rounded-t hover:opacity-80 transition-opacity cursor-pointer`}
-                      style={{ height: `${Math.max(5, Math.min(100, heightPercent))}%` }}
-                      title={`${reading.temperature.toFixed(1)}°C at ${format(
-                        new Date(reading.timestamp),
-                        'HH:mm:ss'
-                      )}`}
-                    />
-                  );
-                })}
+                  {/* Temperature line path */}
+                  <path
+                    d={last100Readings.map((reading, idx) => {
+                      const x = (idx / (last100Readings.length - 1)) * 400;
+                      const tempNormalized = ((reading.temperature - 10) / 30); // Normalize 10-40°C to 0-1
+                      const y = 180 - (tempNormalized * 180); // Invert Y axis
+                      return `${idx === 0 ? 'M' : 'L'} ${x} ${Math.max(0, Math.min(180, y))}`;
+                    }).join(' ')}
+                    fill="none"
+                    stroke="rgb(249, 115, 22)"
+                    strokeWidth="2"
+                    className="drop-shadow-sm"
+                  />
+                  
+                  {/* Data points */}
+                  {last100Readings.map((reading, idx) => {
+                    const x = (idx / (last100Readings.length - 1)) * 400;
+                    const tempNormalized = ((reading.temperature - 10) / 30);
+                    const y = 180 - (tempNormalized * 180);
+                    const temp = reading.temperature;
+                    const color = temp > 30 ? 'rgb(239, 68, 68)' : temp > 25 ? 'rgb(249, 115, 22)' : 'rgb(34, 197, 94)';
+                    
+                    return (
+                      <circle
+                        key={idx}
+                        cx={x}
+                        cy={Math.max(0, Math.min(180, y))}
+                        r="3"
+                        fill={color}
+                        className="hover:r-5 transition-all cursor-pointer"
+                      >
+                        <title>{`${reading.temperature.toFixed(1)}°C at ${format(new Date(reading.timestamp), 'HH:mm:ss')}`}</title>
+                      </circle>
+                    );
+                  })}
+                </svg>
+                {/* Y-axis labels */}
+                <div className="absolute top-0 left-0 text-xs text-muted-foreground">40°C</div>
+                <div className="absolute top-1/2 left-0 text-xs text-muted-foreground -translate-y-1/2">25°C</div>
+                <div className="absolute bottom-0 left-0 text-xs text-muted-foreground">10°C</div>
               </div>
             ) : (
               <div className="h-48 flex items-center justify-center text-sm text-muted-foreground">
@@ -399,24 +428,53 @@ export function LiveMonitor({ deviceId = 'node_01' }: LiveMonitorProps) {
           </CardHeader>
           <CardContent>
             {last100Readings.length > 0 ? (
-              <div className="h-48 flex items-end gap-[2px]">
-                {last100Readings.map((reading, idx) => {
-                  const heightPercent = (reading.humidity / 100) * 100;
-                  const humidity = reading.humidity;
-                  const color = humidity > 70 ? 'bg-indigo-500' : humidity > 50 ? 'bg-blue-500' : 'bg-cyan-400';
+              <div className="h-48 w-full relative">
+                <svg className="w-full h-full" viewBox="0 0 400 180" preserveAspectRatio="none">
+                  {/* Grid lines */}
+                  <line x1="0" y1="45" x2="400" y2="45" stroke="currentColor" strokeOpacity="0.1" strokeWidth="1" />
+                  <line x1="0" y1="90" x2="400" y2="90" stroke="currentColor" strokeOpacity="0.1" strokeWidth="1" />
+                  <line x1="0" y1="135" x2="400" y2="135" stroke="currentColor" strokeOpacity="0.1" strokeWidth="1" />
                   
-                  return (
-                    <div
-                      key={idx}
-                      className={`flex-1 ${color} rounded-t hover:opacity-80 transition-opacity cursor-pointer`}
-                      style={{ height: `${Math.max(5, Math.min(100, heightPercent))}%` }}
-                      title={`${reading.humidity.toFixed(1)}% at ${format(
-                        new Date(reading.timestamp),
-                        'HH:mm:ss'
-                      )}`}
-                    />
-                  );
-                })}
+                  {/* Humidity line path */}
+                  <path
+                    d={last100Readings.map((reading, idx) => {
+                      const x = (idx / (last100Readings.length - 1)) * 400;
+                      const humidityNormalized = reading.humidity / 100; // Normalize 0-100% to 0-1
+                      const y = 180 - (humidityNormalized * 180); // Invert Y axis
+                      return `${idx === 0 ? 'M' : 'L'} ${x} ${Math.max(0, Math.min(180, y))}`;
+                    }).join(' ')}
+                    fill="none"
+                    stroke="rgb(59, 130, 246)"
+                    strokeWidth="2"
+                    className="drop-shadow-sm"
+                  />
+                  
+                  {/* Data points */}
+                  {last100Readings.map((reading, idx) => {
+                    const x = (idx / (last100Readings.length - 1)) * 400;
+                    const humidityNormalized = reading.humidity / 100;
+                    const y = 180 - (humidityNormalized * 180);
+                    const humidity = reading.humidity;
+                    const color = humidity > 70 ? 'rgb(99, 102, 241)' : humidity > 50 ? 'rgb(59, 130, 246)' : 'rgb(34, 211, 238)';
+                    
+                    return (
+                      <circle
+                        key={idx}
+                        cx={x}
+                        cy={Math.max(0, Math.min(180, y))}
+                        r="3"
+                        fill={color}
+                        className="hover:r-5 transition-all cursor-pointer"
+                      >
+                        <title>{`${reading.humidity.toFixed(1)}% at ${format(new Date(reading.timestamp), 'HH:mm:ss')}`}</title>
+                      </circle>
+                    );
+                  })}
+                </svg>
+                {/* Y-axis labels */}
+                <div className="absolute top-0 left-0 text-xs text-muted-foreground">100%</div>
+                <div className="absolute top-1/2 left-0 text-xs text-muted-foreground -translate-y-1/2">50%</div>
+                <div className="absolute bottom-0 left-0 text-xs text-muted-foreground">0%</div>
               </div>
             ) : (
               <div className="h-48 flex items-center justify-center text-sm text-muted-foreground">
