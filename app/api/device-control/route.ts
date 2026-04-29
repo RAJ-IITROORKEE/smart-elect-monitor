@@ -1,22 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
 
-// Device control state storage (in-memory)
-// In production, use a database like PostgreSQL, MongoDB, or Redis
-const deviceControlStore = new Map<string, {
-  pir_enabled: boolean;
-  led_enabled: boolean;
-}>();
-
-// Initialize default control state for a device
-function getOrCreateDeviceControl(deviceId: string) {
-  if (!deviceControlStore.has(deviceId)) {
-    deviceControlStore.set(deviceId, {
-      pir_enabled: true,   // PIR enabled by default
-      led_enabled: false,  // LED off by default
-    });
-  }
-  return deviceControlStore.get(deviceId)!;
-}
+export const dynamic = 'force-dynamic';
 
 // GET handler - Fetch control state for ESP32
 export async function GET(request: NextRequest) {
@@ -34,13 +19,28 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const controlState = getOrCreateDeviceControl(deviceId);
+    // Get or create device control state
+    let controlState = await prisma.deviceControl.findUnique({
+      where: { deviceId },
+    });
+
+    if (!controlState) {
+      // Create default control state
+      controlState = await prisma.deviceControl.create({
+        data: {
+          deviceId,
+          pirEnabled: true,  // PIR enabled by default
+          ledEnabled: false, // LED off by default
+        },
+      });
+    }
 
     return NextResponse.json(
       {
         success: true,
         device_id: deviceId,
-        ...controlState
+        pir_enabled: controlState.pirEnabled,
+        led_enabled: controlState.ledEnabled,
       },
       { 
         status: 200,
@@ -80,23 +80,30 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const controlState = getOrCreateDeviceControl(device_id);
-
-    // Update only provided fields
+    // Build update data only for provided fields
+    const updateData: any = {};
     if (pir_enabled !== undefined) {
-      controlState.pir_enabled = Boolean(pir_enabled);
+      updateData.pirEnabled = Boolean(pir_enabled);
     }
-
     if (led_enabled !== undefined) {
-      controlState.led_enabled = Boolean(led_enabled);
+      updateData.ledEnabled = Boolean(led_enabled);
     }
 
-    deviceControlStore.set(device_id, controlState);
+    // Upsert device control state
+    const controlState = await prisma.deviceControl.upsert({
+      where: { deviceId: device_id },
+      update: updateData,
+      create: {
+        deviceId: device_id,
+        pirEnabled: pir_enabled !== undefined ? Boolean(pir_enabled) : true,
+        ledEnabled: led_enabled !== undefined ? Boolean(led_enabled) : false,
+      },
+    });
 
     console.log('✓ Updated device control:', {
       device_id,
-      pir_enabled: controlState.pir_enabled,
-      led_enabled: controlState.led_enabled,
+      pir_enabled: controlState.pirEnabled,
+      led_enabled: controlState.ledEnabled,
     });
 
     return NextResponse.json(
@@ -104,7 +111,8 @@ export async function POST(request: NextRequest) {
         success: true,
         message: 'Device control updated successfully',
         device_id,
-        ...controlState
+        pir_enabled: controlState.pirEnabled,
+        led_enabled: controlState.ledEnabled,
       },
       { 
         status: 200,

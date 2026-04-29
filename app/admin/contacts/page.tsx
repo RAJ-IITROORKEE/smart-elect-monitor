@@ -11,9 +11,11 @@ interface ContactSubmission {
   id: string;
   name: string;
   email: string;
+  subject: string;
   message: string;
-  timestamp: string;
-  status: "new" | "read" | "responded";
+  createdAt: string;
+  updatedAt: string;
+  status: "new" | "acknowledged" | "resolved";
 }
 
 export default function AdminContactsPage() {
@@ -47,7 +49,7 @@ export default function AdminContactsPage() {
     }
   };
 
-  const updateStatus = async (id: string, status: "new" | "read" | "responded") => {
+  const updateStatus = async (id: string, status: "new" | "acknowledged" | "resolved") => {
     try {
       const response = await fetch("/api/contacts", {
         method: "PATCH",
@@ -83,9 +85,9 @@ export default function AdminContactsPage() {
     switch (status) {
       case "new":
         return "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300";
-      case "read":
+      case "acknowledged":
         return "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300";
-      case "responded":
+      case "resolved":
         return "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300";
       default:
         return "bg-gray-100 text-gray-700 dark:bg-gray-900 dark:text-gray-300";
@@ -151,18 +153,18 @@ export default function AdminContactsPage() {
           New
         </Button>
         <Button
-          variant={filterStatus === "read" ? "default" : "outline"}
+          variant={filterStatus === "acknowledged" ? "default" : "outline"}
           size="sm"
-          onClick={() => setFilterStatus("read")}
+          onClick={() => setFilterStatus("acknowledged")}
         >
-          Read
+          Acknowledged
         </Button>
         <Button
-          variant={filterStatus === "responded" ? "default" : "outline"}
+          variant={filterStatus === "resolved" ? "default" : "outline"}
           size="sm"
-          onClick={() => setFilterStatus("responded")}
+          onClick={() => setFilterStatus("resolved")}
         >
-          Responded
+          Resolved
         </Button>
       </div>
 
@@ -213,6 +215,12 @@ export default function AdminContactsPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
+                  {submission.subject && (
+                    <div className="pb-2 border-b">
+                      <p className="text-xs text-muted-foreground">Subject</p>
+                      <p className="text-sm font-medium">{submission.subject}</p>
+                    </div>
+                  )}
                   <p className="text-sm text-foreground whitespace-pre-wrap break-words">
                     {submission.message}
                   </p>
@@ -220,27 +228,27 @@ export default function AdminContactsPage() {
                   <div className="flex items-center justify-between pt-3 border-t">
                     <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                       <Clock className="h-3.5 w-3.5" />
-                      {formatTimestamp(submission.timestamp)}
+                      {formatTimestamp(submission.createdAt)}
                     </div>
                     
                     <div className="flex items-center gap-2">
-                      {submission.status !== "read" && (
+                      {submission.status !== "acknowledged" && (
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => updateStatus(submission.id, "read")}
+                          onClick={() => updateStatus(submission.id, "acknowledged")}
                         >
-                          Mark as Read
+                          Acknowledge
                         </Button>
                       )}
-                      {submission.status !== "responded" && (
+                      {submission.status !== "resolved" && (
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => updateStatus(submission.id, "responded")}
+                          onClick={() => updateStatus(submission.id, "resolved")}
                         >
                           <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />
-                          Mark as Responded
+                          Mark as Resolved
                         </Button>
                       )}
                     </div>

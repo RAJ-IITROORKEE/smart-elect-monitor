@@ -15,6 +15,7 @@ export default function ContactPage() {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
+    subject: "",
     message: "",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -55,7 +56,7 @@ export default function ContactPage() {
         
         // Reset form after 3 seconds
         setTimeout(() => {
-          setFormData({ name: "", email: "", message: "" });
+          setFormData({ name: "", email: "", subject: "", message: "" });
           setIsSubmitted(false);
         }, 3000);
       } else {
@@ -121,6 +122,17 @@ export default function ContactPage() {
                   onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
                   disabled={isSubmitting || isSubmitted}
                   required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="subject">Subject</Label>
+                <Input 
+                  id="subject" 
+                  name="subject" 
+                  placeholder="What is this about?" 
+                  value={formData.subject}
+                  onChange={(e) => setFormData(prev => ({ ...prev, subject: e.target.value }))}
+                  disabled={isSubmitting || isSubmitted}
                 />
               </div>
               <div className="space-y-2">

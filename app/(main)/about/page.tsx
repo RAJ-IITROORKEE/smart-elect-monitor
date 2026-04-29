@@ -137,7 +137,7 @@ export default function AboutPage() {
         <p className="mx-auto mt-4 max-w-3xl text-base leading-relaxed text-muted-foreground sm:text-lg">
           VoltEdge is an IoT-based electricity monitoring system designed for efficient control
           and automation across hostels, institutions, and hotels.
-          It uses ESP32 development boards with Wi-Fi communication, DHT22 sensors for climate monitoring,
+          It uses ESP32 development boards with Wi-Fi communication, DHT22 sensors for temperature & humidity monitoring,
           and PIR motion detection for smart occupancy tracking with remote LED control capabilities.
         </p>
       </div>
@@ -187,7 +187,7 @@ export default function AboutPage() {
                 Hardware + Communication
               </h3>
               <p className="text-sm text-muted-foreground">
-                ESP32 nodes with DHT22 sensors and PIR motion detectors stream climate and occupancy data over Wi-Fi 
+                ESP32 nodes with DHT22 sensors and PIR motion detectors stream temperature, humidity, and occupancy data over Wi-Fi 
                 for real-time operational monitoring. Remote LED control enables energy-saving automation.
               </p>
             </CardContent>
@@ -199,7 +199,7 @@ export default function AboutPage() {
                 Platform Vision
               </h3>
               <p className="text-sm text-muted-foreground">
-                The dashboard delivers visibility into climate patterns, occupancy behavior, real-time analysis, 
+                The dashboard delivers visibility into weather patterns, occupancy behavior, real-time analysis, 
                 smart alerts, and automation-ready controls to reduce energy wastage while preserving comfort.
               </p>
             </CardContent>
@@ -318,7 +318,7 @@ export default function AboutPage() {
         <div className="mt-6 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm">
           <p className="inline-flex items-center gap-2 text-emerald-700 dark:text-emerald-300">
             <BadgeCheck className="h-4 w-4" />
-            WiFi-based IoT monitoring with ESP32 for real-time climate and occupancy tracking with remote control capabilities.
+            WiFi-based IoT monitoring with ESP32 for real-time weather and occupancy tracking with remote control capabilities.
           </p>
         </div>
       </section>

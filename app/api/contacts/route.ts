@@ -1,22 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
 
 export interface ContactSubmission {
   id: string;
   name: string;
   email: string;
+  subject: string;
   message: string;
-  timestamp: string;
-  status: "new" | "read" | "responded";
+  status: "new" | "acknowledged" | "resolved";
+  createdAt: string;
+  updatedAt: string;
 }
 
-// In-memory storage for contact submissions
-const contactSubmissions: ContactSubmission[] = [];
+export const dynamic = "force-dynamic";
 
 // POST: Submit a new contact form
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, email, message } = body;
+    const { name, email, subject, message } = body;
 
     // Validation
     if (!name || !email || !message) {
@@ -42,23 +44,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create new submission
-    const submission: ContactSubmission = {
-      id: `contact_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      name: name.trim(),
-      email: email.trim().toLowerCase(),
-      message: message.trim(),
-      timestamp: new Date().toISOString(),
-      status: "new",
-    };
-
-    // Store submission (at the beginning to show newest first)
-    contactSubmissions.unshift(submission);
-
-    // Keep only last 100 submissions
-    if (contactSubmissions.length > 100) {
-      contactSubmissions.splice(100);
-    }
+    // Create new submission in MongoDB
+    const inquiry = await prisma.contactInquiry.create({
+      data: {
+        name: name.trim(),
+        email: email.trim().toLowerCase(),
+        subject: subject ? subject.trim() : "General Inquiry",
+        message: message.trim(),
+        status: "new",
+      },
+    });
 
     console.log(`📬 New contact submission from: ${name} (${email})`);
 
@@ -66,7 +61,7 @@ export async function POST(request: NextRequest) {
       { 
         success: true, 
         message: "Contact form submitted successfully",
-        id: submission.id 
+        id: inquiry.id 
       },
       { status: 201 }
     );
@@ -86,21 +81,39 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get("status");
     const limit = parseInt(searchParams.get("limit") || "50");
 
-    let filteredSubmissions = [...contactSubmissions];
-
-    // Filter by status if provided
-    if (status && (status === "new" || status === "read" || status === "responded")) {
-      filteredSubmissions = filteredSubmissions.filter(s => s.status === status);
+    // Build where clause
+    const where: any = {};
+    if (status && (status === "new" || status === "acknowledged" || status === "resolved")) {
+      where.status = status;
     }
 
-    // Apply limit
-    filteredSubmissions = filteredSubmissions.slice(0, limit);
+    // Fetch submissions from MongoDB
+    const [submissions, total] = await Promise.all([
+      prisma.contactInquiry.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        take: limit,
+      }),
+      prisma.contactInquiry.count({ where }),
+    ]);
+
+    // Format submissions for frontend
+    const formattedSubmissions: ContactSubmission[] = submissions.map(s => ({
+      id: s.id,
+      name: s.name,
+      email: s.email,
+      subject: s.subject,
+      message: s.message,
+      status: s.status as "new" | "acknowledged" | "resolved",
+      createdAt: s.createdAt.toISOString(),
+      updatedAt: s.updatedAt.toISOString(),
+    }));
 
     return NextResponse.json({
       success: true,
-      count: filteredSubmissions.length,
-      total: contactSubmissions.length,
-      submissions: filteredSubmissions,
+      count: formattedSubmissions.length,
+      total,
+      submissions: formattedSubmissions,
     });
   } catch (error) {
     console.error("Error fetching contact submissions:", error);
@@ -124,31 +137,43 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    if (!["new", "read", "responded"].includes(status)) {
+    if (!["new", "acknowledged", "resolved"].includes(status)) {
       return NextResponse.json(
-        { error: "Invalid status value" },
+        { error: "Invalid status value. Must be: new, acknowledged, or resolved" },
         { status: 400 }
       );
     }
 
-    const submission = contactSubmissions.find(s => s.id === id);
+    // Update in MongoDB
+    const inquiry = await prisma.contactInquiry.update({
+      where: { id },
+      data: { status },
+    });
 
-    if (!submission) {
+    return NextResponse.json({
+      success: true,
+      message: "Submission status updated",
+      submission: {
+        id: inquiry.id,
+        name: inquiry.name,
+        email: inquiry.email,
+        subject: inquiry.subject,
+        message: inquiry.message,
+        status: inquiry.status,
+        createdAt: inquiry.createdAt.toISOString(),
+        updatedAt: inquiry.updatedAt.toISOString(),
+      },
+    });
+  } catch (error: any) {
+    console.error("Error updating submission status:", error);
+    
+    if (error.code === "P2025") {
       return NextResponse.json(
         { error: "Submission not found" },
         { status: 404 }
       );
     }
-
-    submission.status = status;
-
-    return NextResponse.json({
-      success: true,
-      message: "Submission status updated",
-      submission,
-    });
-  } catch (error) {
-    console.error("Error updating submission status:", error);
+    
     return NextResponse.json(
       { error: "Failed to update submission status" },
       { status: 500 }

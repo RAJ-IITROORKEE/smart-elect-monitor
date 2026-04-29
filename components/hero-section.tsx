@@ -25,13 +25,13 @@ export function HeroSection() {
             <span className="gradient-text">VoltEdge</span>
             <br />
             <span className="text-2xl font-semibold text-muted-foreground sm:text-3xl">
-              Real-time Climate & Occupancy Monitoring
+              Monitor. Control. Save Power.
             </span>
           </h1>
 
            <p className="mt-3 text-sm leading-relaxed text-muted-foreground sm:text-base">
              WiFi-based IoT dashboard for real-time tracking of temperature, humidity, and room occupancy 
-             using ESP32 sensors. Monitor climate conditions, detect presence with PIR sensors, 
+             using ESP32 sensors. Monitor weather conditions, detect presence with PIR sensors, 
              and remotely control LED appliances—all from a centralized dashboard.
            </p>
 
