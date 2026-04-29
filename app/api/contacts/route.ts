@@ -180,3 +180,42 @@ export async function PATCH(request: NextRequest) {
     );
   }
 }
+
+// DELETE: Delete a contact submission
+export async function DELETE(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get("id");
+
+    if (!id) {
+      return NextResponse.json(
+        { error: "ID is required" },
+        { status: 400 }
+      );
+    }
+
+    // Delete from MongoDB
+    await prisma.contactInquiry.delete({
+      where: { id },
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: "Contact submission deleted successfully",
+    });
+  } catch (error: any) {
+    console.error("Error deleting contact submission:", error);
+    
+    if (error.code === "P2025") {
+      return NextResponse.json(
+        { error: "Submission not found" },
+        { status: 404 }
+      );
+    }
+    
+    return NextResponse.json(
+      { error: "Failed to delete submission" },
+      { status: 500 }
+    );
+  }
+}

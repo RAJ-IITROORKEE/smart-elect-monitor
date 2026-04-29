@@ -36,11 +36,6 @@ const navItems = [
     href: "/admin/dashboard",
     icon: LayoutDashboard,
   },
-  // {
-  //   title: "Energy Nodes",
-  //   href: "/admin/dashboard",
-  //   icon: Server,
-  // },
   {
     title: "Live Analysis",
     href: "/admin/live-data",
@@ -55,16 +50,6 @@ const navItems = [
     title: "Notifications",
     href: "/admin/notifications",
     icon: Bell,
-  },
-  // {
-  //   title: "Docs",
-  //   href: "/docs",
-  //   icon: BookOpen,
-  // },
-  {
-    title: "Settings",
-    href: "/admin/dashboard",
-    icon: Settings,
   },
 ];
 

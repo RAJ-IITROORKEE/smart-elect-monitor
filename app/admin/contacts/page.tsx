@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
-import { Mail, Clock, CheckCircle2, MessageSquare, RefreshCw, Filter } from "lucide-react";
+import { Mail, Clock, CheckCircle2, MessageSquare, RefreshCw, Filter, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface ContactSubmission {
@@ -69,6 +69,39 @@ export default function AdminContactsPage() {
       toast({
         title: "Error",
         description: "Failed to update status",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const deleteSubmission = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this contact submission?")) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/contacts?id=${id}`, {
+        method: "DELETE",
+      });
+
+      if (response.ok) {
+        toast({
+          title: "Deleted",
+          description: "Contact submission deleted successfully",
+        });
+        fetchSubmissions();
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to delete submission",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Error deleting submission:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete submission",
         variant: "destructive",
       });
     }
@@ -251,6 +284,15 @@ export default function AdminContactsPage() {
                           Mark as Resolved
                         </Button>
                       )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => deleteSubmission(submission.id)}
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                      >
+                        <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+                        Delete
+                      </Button>
                     </div>
                   </div>
                 </div>
