@@ -60,37 +60,6 @@ function ChartContainer({
   )
 }
 
-function ChartTooltip({
-  active,
-  payload,
-  label,
-  className,
-}: React.ComponentProps<typeof RechartsPrimitive.Tooltip> & {
-  className?: string
-}) {
-  const { config } = useChart()
-
-  if (!active || !payload || payload.length === 0) {
-    return null
-  }
-
-  return (
-    <div className={cn("rounded-lg border bg-background px-3 py-2 text-xs shadow-sm", className)}>
-      <p className="mb-1 text-muted-foreground">{String(label ?? "")}</p>
-      <div className="space-y-1">
-        {payload.map((item) => {
-          const key = String(item.dataKey)
-          const labelText = config[key]?.label ?? key
-          return (
-            <div key={key} className="flex items-center justify-between gap-3">
-              <span className="text-muted-foreground">{labelText}</span>
-              <span className="font-mono text-foreground">{item.value}</span>
-            </div>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
+const ChartTooltip = RechartsPrimitive.Tooltip
 
 export { ChartContainer, ChartTooltip }
