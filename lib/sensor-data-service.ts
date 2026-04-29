@@ -111,6 +111,7 @@ export class SensorDataService {
     
     const temperatures = readings.map((r) => r.temperature);
     const humidities = readings.map((r) => r.humidity);
+    const occupiedReadings = readings.filter((r) => r.occupied).length;
     
     return {
       avgTemperature: temperatures.reduce((a, b) => a + b, 0) / temperatures.length,
@@ -119,6 +120,7 @@ export class SensorDataService {
       maxTemperature: Math.max(...temperatures),
       minHumidity: Math.min(...humidities),
       maxHumidity: Math.max(...humidities),
+      occupancyRate: (occupiedReadings / readings.length) * 100,
     };
   }
 

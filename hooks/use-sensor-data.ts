@@ -171,6 +171,7 @@ export function useSimulateSensorData(deviceId: string = 'node_01', interval: nu
         device_id: deviceId,
         temperature: 20 + Math.random() * 15, // 20-35°C
         humidity: 40 + Math.random() * 40, // 40-80%
+        occupied: Math.random() > 0.5, // Random occupancy
         timestamp: new Date().toISOString(),
       };
 

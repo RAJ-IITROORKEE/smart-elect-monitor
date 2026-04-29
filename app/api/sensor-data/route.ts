@@ -5,6 +5,7 @@ interface SensorData {
   device_id: string;
   temperature: number;
   humidity: number;
+  occupied: boolean;
   timestamp: string;
 }
 
@@ -20,22 +21,22 @@ export async function POST(request: NextRequest) {
     const body: SensorData = await request.json();
 
     // Validate required fields
-    if (!body.device_id || body.temperature === undefined || body.humidity === undefined) {
+    if (!body.device_id || body.temperature === undefined || body.humidity === undefined || body.occupied === undefined) {
       return NextResponse.json(
         { 
           success: false, 
-          error: 'Missing required fields: device_id, temperature, humidity' 
+          error: 'Missing required fields: device_id, temperature, humidity, occupied' 
         },
         { status: 400 }
       );
     }
 
     // Validate data types and ranges
-    if (typeof body.temperature !== 'number' || typeof body.humidity !== 'number') {
+    if (typeof body.temperature !== 'number' || typeof body.humidity !== 'number' || typeof body.occupied !== 'boolean') {
       return NextResponse.json(
         { 
           success: false, 
-          error: 'Invalid data types for temperature or humidity' 
+          error: 'Invalid data types for temperature, humidity, or occupied' 
         },
         { status: 400 }
       );
@@ -46,6 +47,7 @@ export async function POST(request: NextRequest) {
       device_id: body.device_id,
       temperature: body.temperature,
       humidity: body.humidity,
+      occupied: body.occupied,
       timestamp: new Date().toISOString(),
     };
 
@@ -65,6 +67,7 @@ export async function POST(request: NextRequest) {
       device_id: sensorData.device_id,
       temperature: `${sensorData.temperature}°C`,
       humidity: `${sensorData.humidity}%`,
+      occupied: sensorData.occupied,
       timestamp: sensorData.timestamp,
       total_readings: deviceReadings.length,
     });

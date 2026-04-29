@@ -5,8 +5,9 @@ import { useSensorData, useSimulateSensorData } from '@/hooks/use-sensor-data';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Thermometer, Droplets, Activity, RefreshCw, Database, Play, Pause } from 'lucide-react';
+import { Thermometer, Droplets, Activity, RefreshCw, Database, Play, Pause, Users, Lightbulb, Eye, EyeOff, Power } from 'lucide-react';
 import { format } from 'date-fns';
+import { toast } from 'sonner';
 
 interface LiveMonitorProps {
   deviceId?: string;
@@ -21,9 +22,12 @@ export function LiveMonitor({ deviceId = 'node_01' }: LiveMonitorProps) {
 
   const { isSimulating, startSimulation, stopSimulation } = useSimulateSensorData(deviceId, 10000);
   const [isPulse, setIsPulse] = useState(false);
+  const [pirEnabled, setPirEnabled] = useState(true);
+  const [ledEnabled, setLedEnabled] = useState(false);
+  const [isUpdatingControl, setIsUpdatingControl] = useState(false);
 
   const device = devices[deviceId];
-  const last24Hours = readings.slice(-144); // Last 24 hours (assuming 10s intervals = 144 in 24min for demo)
+  const last100Readings = readings.slice(-100);
 
   useEffect(() => {
     if (latestReading) {
@@ -33,30 +37,92 @@ export function LiveMonitor({ deviceId = 'node_01' }: LiveMonitorProps) {
     }
   }, [latestReading]);
 
-  const temperatureColor = latestReading
-    ? latestReading.temperature > 30
-      ? 'text-red-500'
-      : latestReading.temperature > 25
-      ? 'text-orange-500'
-      : 'text-green-500'
-    : 'text-muted-foreground';
+  // Fetch initial control state
+  useEffect(() => {
+    fetchControlState();
+  }, [deviceId]);
 
-  const humidityColor = latestReading
-    ? latestReading.humidity > 70
-      ? 'text-blue-500'
-      : latestReading.humidity > 50
-      ? 'text-cyan-500'
-      : 'text-yellow-500'
-    : 'text-muted-foreground';
+  const fetchControlState = async () => {
+    try {
+      const response = await fetch(`/api/device-control?device_id=${deviceId}`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setPirEnabled(data.pir_enabled);
+          setLedEnabled(data.led_enabled);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch control state:', error);
+    }
+  };
+
+  const updateControlState = async (updates: { pir_enabled?: boolean; led_enabled?: boolean }) => {
+    setIsUpdatingControl(true);
+    try {
+      const response = await fetch('/api/device-control', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          device_id: deviceId,
+          ...updates,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          if (updates.pir_enabled !== undefined) setPirEnabled(data.pir_enabled);
+          if (updates.led_enabled !== undefined) setLedEnabled(data.led_enabled);
+          toast.success('Device control updated successfully');
+        }
+      } else {
+        toast.error('Failed to update device control');
+      }
+    } catch (error) {
+      console.error('Failed to update control:', error);
+      toast.error('Failed to update device control');
+    } finally {
+      setIsUpdatingControl(false);
+    }
+  };
+
+  const togglePIR = () => {
+    updateControlState({ pir_enabled: !pirEnabled });
+  };
+
+  const toggleLED = () => {
+    updateControlState({ led_enabled: !ledEnabled });
+  };
+
+  // Temperature badge logic
+  const getTemperatureBadge = (temp: number) => {
+    if (temp < 15) return { label: 'Cold', variant: 'secondary' as const, color: 'bg-blue-100 text-blue-800' };
+    if (temp < 20) return { label: 'Cool', variant: 'secondary' as const, color: 'bg-cyan-100 text-cyan-800' };
+    if (temp < 25) return { label: 'Comfortable', variant: 'default' as const, color: 'bg-green-100 text-green-800' };
+    if (temp < 30) return { label: 'Warm', variant: 'secondary' as const, color: 'bg-orange-100 text-orange-800' };
+    return { label: 'Hot', variant: 'destructive' as const, color: 'bg-red-100 text-red-800' };
+  };
+
+  // Humidity badge logic
+  const getHumidityBadge = (humidity: number) => {
+    if (humidity < 30) return { label: 'Dry', variant: 'secondary' as const, color: 'bg-yellow-100 text-yellow-800' };
+    if (humidity < 50) return { label: 'Comfortable', variant: 'default' as const, color: 'bg-green-100 text-green-800' };
+    if (humidity < 70) return { label: 'Humid', variant: 'secondary' as const, color: 'bg-blue-100 text-blue-800' };
+    return { label: 'Very Humid', variant: 'destructive' as const, color: 'bg-indigo-100 text-indigo-800' };
+  };
+
+  const tempBadge = latestReading ? getTemperatureBadge(latestReading.temperature) : null;
+  const humidityBadge = latestReading ? getHumidityBadge(latestReading.humidity) : null;
 
   return (
     <div className="space-y-6">
       {/* Header with Device Info */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Live Sensor Monitor</h2>
           <p className="text-sm text-muted-foreground">
-            Real-time temperature and humidity tracking
+            Real-time temperature, humidity & occupancy tracking
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -119,32 +185,85 @@ export function LiveMonitor({ deviceId = 'node_01' }: LiveMonitorProps) {
               <p className="font-semibold">{readings.length}</p>
             </div>
             <div>
-              <p className="text-muted-foreground">Storage</p>
-              <p className="font-semibold flex items-center gap-1">
-                <Database className="h-3 w-3" />
-                Local
-              </p>
+              <p className="text-muted-foreground">Occupancy Rate</p>
+              <p className="font-semibold">{stats ? `${stats.occupancyRate.toFixed(1)}%` : 'N/A'}</p>
             </div>
           </div>
         </CardContent>
       </Card>
 
+      {/* Device Controls */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Device Controls</CardTitle>
+          <CardDescription>Control PIR sensor and LED remotely</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap gap-3">
+            <Button
+              variant={pirEnabled ? 'default' : 'outline'}
+              size="default"
+              onClick={togglePIR}
+              disabled={isUpdatingControl}
+              className="flex-1 min-w-[200px]"
+            >
+              {pirEnabled ? (
+                <>
+                  <Eye className="h-5 w-5 mr-2" />
+                  PIR Sensor: ON
+                </>
+              ) : (
+                <>
+                  <EyeOff className="h-5 w-5 mr-2" />
+                  PIR Sensor: OFF
+                </>
+              )}
+            </Button>
+            <Button
+              variant={ledEnabled ? 'default' : 'outline'}
+              size="default"
+              onClick={toggleLED}
+              disabled={isUpdatingControl}
+              className={`flex-1 min-w-[200px] ${ledEnabled ? 'bg-yellow-500 hover:bg-yellow-600' : ''}`}
+            >
+              {ledEnabled ? (
+                <>
+                  <Lightbulb className="h-5 w-5 mr-2" />
+                  LED: ON
+                </>
+              ) : (
+                <>
+                  <Power className="h-5 w-5 mr-2" />
+                  LED: OFF
+                </>
+              )}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Current Readings */}
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-3">
+        {/* Temperature Card */}
         <Card className={isPulse ? 'animate-pulse-subtle' : ''}>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-base font-semibold">Temperature</CardTitle>
-              <Thermometer className={`h-5 w-5 ${temperatureColor}`} />
+              <Thermometer className="h-5 w-5 text-orange-500" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2">
-              <div className={`text-4xl font-bold tracking-tight ${temperatureColor}`}>
+            <div className="space-y-3">
+              <div className="text-4xl font-bold tracking-tight">
                 {latestReading ? `${latestReading.temperature.toFixed(1)}°C` : 'N/A'}
               </div>
+              {tempBadge && (
+                <Badge className={tempBadge.color}>
+                  {tempBadge.label}
+                </Badge>
+              )}
               {stats && (
-                <div className="text-xs text-muted-foreground space-y-1">
+                <div className="text-xs text-muted-foreground space-y-1 pt-2">
                   <div className="flex justify-between">
                     <span>Min (24h):</span>
                     <span className="font-mono">{stats.minTemperature.toFixed(1)}°C</span>
@@ -163,20 +282,26 @@ export function LiveMonitor({ deviceId = 'node_01' }: LiveMonitorProps) {
           </CardContent>
         </Card>
 
+        {/* Humidity Card */}
         <Card className={isPulse ? 'animate-pulse-subtle' : ''}>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-base font-semibold">Humidity</CardTitle>
-              <Droplets className={`h-5 w-5 ${humidityColor}`} />
+              <Droplets className="h-5 w-5 text-blue-500" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2">
-              <div className={`text-4xl font-bold tracking-tight ${humidityColor}`}>
+            <div className="space-y-3">
+              <div className="text-4xl font-bold tracking-tight">
                 {latestReading ? `${latestReading.humidity.toFixed(1)}%` : 'N/A'}
               </div>
+              {humidityBadge && (
+                <Badge className={humidityBadge.color}>
+                  {humidityBadge.label}
+                </Badge>
+              )}
               {stats && (
-                <div className="text-xs text-muted-foreground space-y-1">
+                <div className="text-xs text-muted-foreground space-y-1 pt-2">
                   <div className="flex justify-between">
                     <span>Min (24h):</span>
                     <span className="font-mono">{stats.minHumidity.toFixed(1)}%</span>
@@ -194,25 +319,60 @@ export function LiveMonitor({ deviceId = 'node_01' }: LiveMonitorProps) {
             </div>
           </CardContent>
         </Card>
-      </div>
 
-      {/* Charts */}
-      <div className="grid gap-4 lg:grid-cols-2">
-        {/* Temperature Chart */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Temperature Timeline</CardTitle>
-            <CardDescription>Last {last24Hours.length} readings</CardDescription>
+        {/* Occupancy Card */}
+        <Card className={isPulse ? 'animate-pulse-subtle' : ''}>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base font-semibold">Room Occupancy</CardTitle>
+              <Users className="h-5 w-5 text-purple-500" />
+            </div>
           </CardHeader>
           <CardContent>
-            {last24Hours.length > 0 ? (
-              <div className="h-48 flex items-end gap-1">
-                {last24Hours.map((reading, idx) => {
-                  const heightPercent = ((reading.temperature - 15) / 20) * 100; // Scale 15-35°C
+            <div className="space-y-3">
+              <div className="text-4xl font-bold tracking-tight">
+                {latestReading ? (latestReading.occupied ? 'YES' : 'NO') : 'N/A'}
+              </div>
+              <Badge className={latestReading?.occupied ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
+                {latestReading?.occupied ? 'Occupied' : 'Vacant'}
+              </Badge>
+              {stats && (
+                <div className="text-xs text-muted-foreground space-y-1 pt-2">
+                  <div className="flex justify-between">
+                    <span>Occupancy Rate:</span>
+                    <span className="font-mono">{stats.occupancyRate.toFixed(1)}%</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Total Readings:</span>
+                    <span className="font-mono">{readings.length}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Separate Line Graphs */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        {/* Temperature Timeline Graph */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Temperature Trend</CardTitle>
+            <CardDescription>Last {last100Readings.length} readings</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {last100Readings.length > 0 ? (
+              <div className="h-48 flex items-end gap-[2px]">
+                {last100Readings.map((reading, idx) => {
+                  const heightPercent = ((reading.temperature - 10) / 30) * 100;
+                  const temp = reading.temperature;
+                  const color = temp > 30 ? 'bg-red-500' : temp > 25 ? 'bg-orange-500' : 'bg-green-500';
+                  
                   return (
                     <div
                       key={idx}
-                      className="flex-1 bg-gradient-to-t from-orange-500 to-red-500 rounded-t hover:opacity-80 transition-opacity"
+                      className={`flex-1 ${color} rounded-t hover:opacity-80 transition-opacity cursor-pointer`}
                       style={{ height: `${Math.max(5, Math.min(100, heightPercent))}%` }}
                       title={`${reading.temperature.toFixed(1)}°C at ${format(
                         new Date(reading.timestamp),
@@ -231,21 +391,24 @@ export function LiveMonitor({ deviceId = 'node_01' }: LiveMonitorProps) {
           </CardContent>
         </Card>
 
-        {/* Humidity Chart */}
+        {/* Humidity Timeline Graph */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Humidity Timeline</CardTitle>
-            <CardDescription>Last {last24Hours.length} readings</CardDescription>
+            <CardTitle className="text-base">Humidity Trend</CardTitle>
+            <CardDescription>Last {last100Readings.length} readings</CardDescription>
           </CardHeader>
           <CardContent>
-            {last24Hours.length > 0 ? (
-              <div className="h-48 flex items-end gap-1">
-                {last24Hours.map((reading, idx) => {
-                  const heightPercent = (reading.humidity / 100) * 100; // Scale 0-100%
+            {last100Readings.length > 0 ? (
+              <div className="h-48 flex items-end gap-[2px]">
+                {last100Readings.map((reading, idx) => {
+                  const heightPercent = (reading.humidity / 100) * 100;
+                  const humidity = reading.humidity;
+                  const color = humidity > 70 ? 'bg-indigo-500' : humidity > 50 ? 'bg-blue-500' : 'bg-cyan-400';
+                  
                   return (
                     <div
                       key={idx}
-                      className="flex-1 bg-gradient-to-t from-blue-500 to-cyan-400 rounded-t hover:opacity-80 transition-opacity"
+                      className={`flex-1 ${color} rounded-t hover:opacity-80 transition-opacity cursor-pointer`}
                       style={{ height: `${Math.max(5, Math.min(100, heightPercent))}%` }}
                       title={`${reading.humidity.toFixed(1)}% at ${format(
                         new Date(reading.timestamp),
@@ -264,6 +427,39 @@ export function LiveMonitor({ deviceId = 'node_01' }: LiveMonitorProps) {
           </CardContent>
         </Card>
       </div>
+
+      {/* Occupancy Timeline */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Occupancy Timeline</CardTitle>
+          <CardDescription>Room occupancy history - Last {last100Readings.length} readings</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {last100Readings.length > 0 ? (
+            <div className="h-24 flex items-stretch gap-[2px]">
+              {last100Readings.map((reading, idx) => (
+                <div
+                  key={idx}
+                  className={`flex-1 rounded ${
+                    reading.occupied 
+                      ? 'bg-green-500' 
+                      : 'bg-gray-300 dark:bg-gray-700'
+                  } hover:opacity-80 transition-opacity cursor-pointer`}
+                  title={`${reading.occupied ? 'Occupied' : 'Vacant'} at ${format(
+                    new Date(reading.timestamp),
+                    'HH:mm:ss'
+                  )}`}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="h-24 flex items-center justify-center text-sm text-muted-foreground">
+              <Activity className="h-4 w-4 mr-2" />
+              No data available. Start simulation or wait for sensor data.
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
